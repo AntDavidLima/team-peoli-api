@@ -1,0 +1,16 @@
+services:
+  postgres:
+    container_name: 'team-peoli-postgres'
+    image: bitnami/postgresql:16
+    ports:
+      - '5432:5432'
+    volumes:
+      - .docker/postgres:/bitnami/postgres
+    networks:
+      - team-peoli
+    env_file:
+      - .env
+    restart: on-failure
+
+networks:
+  team-peoli:
