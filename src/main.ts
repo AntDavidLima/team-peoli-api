@@ -5,6 +5,8 @@ import {
 	FastifyAdapter,
 	NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import { ConfigService } from '@nestjs/config';
+import { Env } from './env';
 
 async function bootstrap() {
 	const app = await NestFactory.create<NestFastifyApplication>(
@@ -22,6 +24,9 @@ async function bootstrap() {
 	const document = SwaggerModule.createDocument(app, config);
 	SwaggerModule.setup('api', app, document);
 
-	await app.listen(3000);
+	const configService = app.get<ConfigService<Env, true>>(ConfigService);
+
+	await app.listen(configService.get('APPLICATION_PORT'));
 }
+
 bootstrap();
