@@ -10,14 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Routine {
+  id           Int       @id @default(autoincrement())
+  name         String
+  startDate    DateTime  @map("start_date") @db.Date
+  endDate      DateTime? @map("end_date") @db.Date
+  orientations String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  emphasis  MuscleGroup[]
+  trainings Training[]
+
+  @@map("routine")
+}
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  password  String
-  phone     String?  @db.VarChar(11)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  name            String
+  password        String
+  phone           String   @db.VarChar(11)
+  profilePhotoUrl String?  @map("profile_photo_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   training Training[]
   workouts Workout[]
@@ -31,6 +47,8 @@ model Exercise {
   executionVideoUrl String?  @map("execution_video_url")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+  instructions      String?
+  restTime          Int?     @map("rest_time")
 
   muscleGroups ExercisedMuscleGroup[]
   trainings    TrainingExercise[]
@@ -47,11 +65,16 @@ model MuscleGroup {
 
   exercises ExercisedMuscleGroup[]
 
+  routine   Routine? @relation(fields: [routineId], references: [id])
+  routineId Int?     @map("routine_id")
+
   @@map("muscle_group")
 }
 
 model ExercisedMuscleGroup {
-  weight Int @db.SmallInt
+  weight    Int      @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   exercise   Exercise @relation(fields: [exerciseId], references: [id])
   exerciseId Int      @map("exercise_id")
@@ -67,9 +90,11 @@ model Training {
   id        Int      @id @default(autoincrement())
   name      String?
   day       Day
-  mesocycle String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  routine   Routine? @relation(fields: [routineId], references: [id])
+  routineId Int?     @map("routine_id")
 
   exercises TrainingExercise[]
   workouts  Workout[]
@@ -79,9 +104,12 @@ model Training {
 }
 
 model TrainingExercise {
-  sets Int @db.SmallInt
-  reps Int @db.SmallInt
-  load Int @db.SmallInt
+  sets         Int      @db.SmallInt
+  reps         Int      @db.SmallInt
+  orientations String?
+  restTime     Int?     @map("rest_time")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   exercise   Exercise @relation(fields: [exerciseId], references: [id])
   exerciseId Int      @map("exercise_id")
@@ -94,11 +122,13 @@ model TrainingExercise {
 }
 
 model Workout {
-  id            Int      @id @default(autoincrement())
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  feedback      String?
-  executionDate DateTime @map("execution_date")
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  feedback  String?
+  intensity Intensity
+  startTime DateTime  @map("start_time")
+  endTime   DateTime? @map("end_time")
 
   training   Training @relation(fields: [trainingId], references: [id])
   trainingId Int      @map("training_id")
@@ -107,12 +137,16 @@ model Workout {
 
   student   User @relation(fields: [studentId], references: [id])
   studentId Int  @map("student_id")
+
+  @@map("workout")
 }
 
 model WorkoutExercise {
-  sets Int @db.SmallInt
-  reps Int @db.SmallInt
-  load Int @db.SmallInt
+  sets      Int      @db.SmallInt
+  reps      Int      @db.SmallInt
+  load      Int      @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   exercise   Exercise @relation(fields: [exerciseId], references: [id])
   exerciseId Int      @map("exercise_id")
@@ -134,4 +168,12 @@ enum Day {
   SATURDAY
 
   @@map("day")
+}
+
+enum Intensity {
+  LIGHT
+  MODERATE
+  VIGOROUS
+
+  @@map("intensity")
 }
