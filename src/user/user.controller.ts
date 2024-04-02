@@ -3,10 +3,12 @@ import {
 	ConflictException,
 	Controller,
 	Post,
+	UseGuards,
 	UsePipes,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
+import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
@@ -26,6 +28,7 @@ const createUserBodySchema = z.object({
 type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
 
 @Controller('user')
+@UseGuards(AuthenticationGuard)
 export class UserController {
 	constructor(
 		private prismaService: PrismaService,
