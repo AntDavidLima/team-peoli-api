@@ -12,9 +12,13 @@ import { AuthenticationStrategy } from './authentication.strategy';
 		PassportModule,
 		JwtModule.registerAsync({
 			inject: [ConfigService],
-			useFactory(configService: ConfigService<Env>) {
-				const jwtPrivateKey = configService.get('JWT_PRIVATE_KEY');
-				const jwtPublicKey = configService.get('JWT_PUBLIC_KEY');
+			useFactory(configService: ConfigService<Env, true>) {
+				const jwtPrivateKey = configService.get('JWT_PRIVATE_KEY', {
+					infer: true,
+				});
+				const jwtPublicKey = configService.get('JWT_PUBLIC_KEY', {
+					infer: true,
+				});
 
 				return {
 					signOptions: { algorithm: 'RS512' },

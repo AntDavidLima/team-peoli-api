@@ -4,11 +4,10 @@ import {
 	Controller,
 	Post,
 	UseGuards,
-	UsePipes,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '@nestjs/passport';
 import { hash } from 'bcryptjs';
-import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
@@ -28,7 +27,7 @@ const createUserBodySchema = z.object({
 type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
 
 @Controller('user')
-@UseGuards(AuthenticationGuard)
+@UseGuards(AuthGuard('jwt'))
 export class UserController {
 	constructor(
 		private prismaService: PrismaService,
@@ -36,8 +35,10 @@ export class UserController {
 	) { }
 
 	@Post()
-	@UsePipes(new ZodValidationPipe(createUserBodySchema))
-	async store(@Body() { email, name, phone }: CreateUserBodySchema) {
+	async store(
+		@Body(new ZodValidationPipe(createUserBodySchema))
+		{ email, name, phone }: CreateUserBodySchema,
+	) {
 		const emailInUse = await this.prismaService.user.findUnique({
 			where: { email },
 		});
