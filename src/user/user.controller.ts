@@ -1,13 +1,17 @@
 import {
+	BadRequestException,
 	Body,
 	ConflictException,
 	Controller,
+	ForbiddenException,
 	Post,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { hash } from 'bcryptjs';
+import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
+import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
 import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
@@ -38,7 +42,30 @@ export class UserController {
 	async store(
 		@Body(new ZodValidationPipe(createUserBodySchema))
 		{ email, name, phone }: CreateUserBodySchema,
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
+		const currentUser = await this.prismaService.user.findUnique({
+			where: {
+				id: authenticationTokenPayload.sub,
+			},
+			select: {
+				isProfessor: true,
+			},
+		});
+
+		if (!currentUser) {
+			throw new BadRequestException(
+				'Não foi possível identificar o usuário logado',
+			);
+		}
+
+		if (!currentUser.isProfessor) {
+			throw new ForbiddenException(
+				'Apenas professores podem criar novos usuários',
+			);
+		}
+
 		const emailInUse = await this.prismaService.user.findUnique({
 			where: { email },
 		});

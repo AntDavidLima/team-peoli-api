@@ -5,11 +5,13 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Env } from 'src/env';
 import { z } from 'zod';
 
-const tokenPayloadSchema = z.object({
+const authenticationTokenPayloadSchema = z.object({
 	sub: z.coerce.number(),
 });
 
-export type TokenPayloadSchema = z.infer<typeof tokenPayloadSchema>;
+export type AuthenticationTokenPayloadSchema = z.infer<
+	typeof authenticationTokenPayloadSchema
+>;
 
 @Injectable()
 export class AuthenticationStrategy extends PassportStrategy(Strategy) {
@@ -23,7 +25,7 @@ export class AuthenticationStrategy extends PassportStrategy(Strategy) {
 		});
 	}
 
-	validate(token: TokenPayloadSchema) {
-		return tokenPayloadSchema.parse(token);
+	validate(authenticationToken: AuthenticationTokenPayloadSchema) {
+		return authenticationTokenPayloadSchema.parse(authenticationToken);
 	}
 }
