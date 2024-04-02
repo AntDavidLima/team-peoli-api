@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
+import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
@@ -28,7 +29,7 @@ type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
 export class UserController {
 	constructor(
 		private prismaService: PrismaService,
-		private configService: ConfigService,
+		private configService: ConfigService<Env, true>,
 	) { }
 
 	@Post()
@@ -44,12 +45,11 @@ export class UserController {
 
 		const password = Math.random().toString(36).slice(-8);
 
-		const passwordHash = await hash(
-			password,
-			this.configService.get<ConfigService>('ENCRYPTION_ROUNDS', {
-				infer: true,
-			}),
-		);
+		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
+			infer: true,
+		});
+
+		const passwordHash = await hash(password, rounds);
 
 		return this.prismaService.user.create({
 			data: {
