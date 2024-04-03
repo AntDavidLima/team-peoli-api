@@ -8,8 +8,8 @@ import {
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthGuard } from '@nestjs/passport';
 import { hash } from 'bcryptjs';
+import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
 import { Env } from 'src/env';
@@ -31,7 +31,7 @@ const createUserBodySchema = z.object({
 type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
 
 @Controller('user')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthenticationGuard)
 export class UserController {
 	constructor(
 		private prismaService: PrismaService,
