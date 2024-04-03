@@ -5,7 +5,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - .docker/postgres:/bitnami/postgres
+      - .docker/postgres:/bitnami/postgresql
     networks:
       - team-peoli
     env_file:
