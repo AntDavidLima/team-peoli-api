@@ -4,6 +4,7 @@ import {
 	ConflictException,
 	Controller,
 	ForbiddenException,
+	Get,
 	Post,
 	UseGuards,
 } from '@nestjs/common';
@@ -94,6 +95,45 @@ export class UserController {
 				name: true,
 				phone: true,
 				id: true,
+			},
+		});
+	}
+
+	@Get()
+	async index(
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+	) {
+		const currentUser = await this.prismaService.user.findUnique({
+			where: {
+				id: authenticationTokenPayload.sub,
+			},
+			select: {
+				isProfessor: true,
+			},
+		});
+
+		if (!currentUser) {
+			throw new BadRequestException(
+				'Não foi possível identificar o usuário logado',
+			);
+		}
+
+		if (!currentUser.isProfessor) {
+			throw new ForbiddenException(
+				'Apenas professores podem criar novos usuários',
+			);
+		}
+
+		return this.prismaService.user.findMany({
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				phone: true,
+			},
+			where: {
+				isProfessor: false,
 			},
 		});
 	}
