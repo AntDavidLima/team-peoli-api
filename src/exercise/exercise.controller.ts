@@ -1,48 +1,36 @@
 import {
 	BadRequestException,
 	Body,
-	ConflictException,
 	Controller,
 	ForbiddenException,
 	Get,
 	Post,
 	UseGuards,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { hash } from 'bcryptjs';
 import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
-import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 
-const createUserBodySchema = z.object({
+const createExerciseBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	email: z
-		.string({ required_error: "O campo 'E-mail' é obrigatório" })
-		.email({ message: 'E-mail inválido' }),
-	phone: z
-		.string({ required_error: "O campo 'Telefone' é obrigatório" })
-		.length(11, { message: 'O telefone deve possuir 11 dígitos' })
-		.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
+	instructions: z.string().optional(),
+	restTime: z.coerce.number().optional(),
 });
 
-type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
+type CreateExerciseBodySchema = z.infer<typeof createExerciseBodySchema>;
 
-@Controller('user')
+@Controller('exercise')
 @UseGuards(AuthenticationGuard)
-export class UserController {
-	constructor(
-		private prismaService: PrismaService,
-		private configService: ConfigService<Env, true>,
-	) { }
+export class ExerciseController {
+	constructor(private prismaService: PrismaService) { }
 
 	@Post()
 	async store(
-		@Body(new ZodValidationPipe(createUserBodySchema))
-		{ email, name, phone }: CreateUserBodySchema,
+		@Body(new ZodValidationPipe(createExerciseBodySchema))
+		{ name, instructions, restTime }: CreateExerciseBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -63,38 +51,21 @@ export class UserController {
 
 		if (!currentUser.isProfessor) {
 			throw new ForbiddenException(
-				'Apenas professores podem criar novos usuários',
+				'Apenas professores podem criar novos exercícios',
 			);
 		}
 
-		const emailInUse = await this.prismaService.user.findUnique({
-			where: { email },
-		});
-
-		if (emailInUse) {
-			throw new ConflictException('Este e-mail já está em uso');
-		}
-
-		const password = Math.random().toString(36).slice(-8);
-
-		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
-			infer: true,
-		});
-
-		const passwordHash = await hash(password, rounds);
-
-		return this.prismaService.user.create({
+		return await this.prismaService.exercise.create({
 			data: {
-				email,
 				name,
-				phone,
-				password: passwordHash,
+				instructions,
+				restTime,
 			},
 			select: {
-				email: true,
-				name: true,
-				phone: true,
 				id: true,
+				name: true,
+				instructions: true,
+				restTime: true,
 			},
 		});
 	}
@@ -121,19 +92,16 @@ export class UserController {
 
 		if (!currentUser.isProfessor) {
 			throw new ForbiddenException(
-				'Lista de alunos disponível apenas para professores',
+				'Lista de exercícios disponível apenas para professores',
 			);
 		}
 
-		return this.prismaService.user.findMany({
+		return this.prismaService.exercise.findMany({
 			select: {
 				id: true,
 				name: true,
-				email: true,
-				phone: true,
-			},
-			where: {
-				isProfessor: false,
+				instructions: true,
+				restTime: true,
 			},
 		});
 	}
