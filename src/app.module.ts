@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { envSchema } from './env';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { ExerciseController } from './exercise/exercise.controller';
+import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 
 @Module({
 	imports: [
@@ -14,7 +15,7 @@ import { ExerciseController } from './exercise/exercise.controller';
 		}),
 		AuthenticationModule,
 	],
-	controllers: [UserController, ExerciseController],
+	controllers: [UserController, ExerciseController, MuscleGroupController],
 	providers: [PrismaService],
 })
 export class AppModule { }
