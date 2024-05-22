@@ -73,7 +73,7 @@ model MuscleGroup {
 }
 
 model ExercisedMuscleGroup {
-  weight    Int      @db.SmallInt
+  weight    Decimal  @db.Decimal(3, 2)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

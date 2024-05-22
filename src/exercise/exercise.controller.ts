@@ -18,6 +18,20 @@ const createExerciseBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
 	instructions: z.string().optional(),
 	restTime: z.coerce.number().optional(),
+	muscleGroups: z
+		.object({
+			value: z.coerce.number({
+				required_error:
+					'Não foi possível identificar um ou mais dos grupos musculares',
+			}),
+			weight: z.coerce.number({
+				required_error: "Um ou mais dos grupos musculares está sem 'Peso'",
+			}),
+		})
+		.array()
+		.min(1, {
+			message: 'Cada exercício deve possuir pelo menos um grupo muscular',
+		}),
 });
 
 type CreateExerciseBodySchema = z.infer<typeof createExerciseBodySchema>;
@@ -30,7 +44,7 @@ export class ExerciseController {
 	@Post()
 	async store(
 		@Body(new ZodValidationPipe(createExerciseBodySchema))
-		{ name, instructions, restTime }: CreateExerciseBodySchema,
+		{ name, instructions, restTime, muscleGroups }: CreateExerciseBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -55,11 +69,33 @@ export class ExerciseController {
 			);
 		}
 
+		const muscleGroupsExist = await this.prismaService.muscleGroup.findMany({
+			where: {
+				id: {
+					in: muscleGroups.map((muscleGroup) => muscleGroup.value),
+				},
+			},
+		});
+
+		if (muscleGroupsExist.length !== muscleGroups.length) {
+			throw new BadRequestException(
+				'Um ou mais dos grupos musculares informados não foram encontrados',
+			);
+		}
+
 		return await this.prismaService.exercise.create({
 			data: {
 				name,
 				instructions,
 				restTime,
+				muscleGroups: {
+					createMany: {
+						data: muscleGroups.map((muscleGroup) => ({
+							weight: muscleGroup.weight,
+							muscleGroupId: muscleGroup.value,
+						})),
+					},
+				},
 			},
 			select: {
 				id: true,
