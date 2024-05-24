@@ -48,7 +48,7 @@ model Exercise {
   executionVideoUrl String?  @map("execution_video_url")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
-  instructions      String?
+  instructions      Json?
   restTime          Int?     @map("rest_time")
 
   muscleGroups ExercisedMuscleGroup[]

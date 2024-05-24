@@ -14,9 +14,18 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 
+const literalSchema = z.union([z.string(), z.number(), z.boolean()]);
+type Literal = z.infer<typeof literalSchema>;
+type Json = Literal | { [key: string]: Json } | Json[];
+const jsonSchema: z.ZodType<Json> = z.lazy(() =>
+	z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)]),
+);
+
 const createExerciseBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	instructions: z.string().optional(),
+	instructions: z.lazy(() =>
+		z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)]),
+	),
 	restTime: z.coerce.number().optional(),
 	muscleGroups: z
 		.object({
