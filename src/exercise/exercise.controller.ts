@@ -138,6 +138,17 @@ export class ExerciseController {
 				name: true,
 				instructions: true,
 				restTime: true,
+				muscleGroups: {
+					select: {
+						weight: true,
+						muscleGroup: {
+							select: {
+								name: true,
+								id: true,
+							},
+						},
+					},
+				},
 			},
 		});
 	}
