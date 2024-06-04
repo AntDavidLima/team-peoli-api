@@ -5,7 +5,9 @@ import {
 	Controller,
 	ForbiddenException,
 	Get,
+	Param,
 	Post,
+	Query,
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -30,6 +32,20 @@ const createUserBodySchema = z.object({
 });
 
 type CreateUserBodySchema = z.infer<typeof createUserBodySchema>;
+
+const getUserParamsSchema = z.object({
+	id: z.coerce.number(),
+});
+
+type GetUserParamsSchema = z.infer<typeof getUserParamsSchema>;
+
+const listUsersQueryParamsSchema = z.object({
+	rows: z.coerce.number().default(10),
+	page: z.coerce.number().default(1),
+	query: z.string().optional(),
+});
+
+type ListUsersQueryParamsSchema = z.infer<typeof listUsersQueryParamsSchema>;
 
 @Controller('user')
 @UseGuards(AuthenticationGuard)
@@ -103,6 +119,8 @@ export class UserController {
 	async index(
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+		@Query(new ZodValidationPipe(listUsersQueryParamsSchema))
+		{ page, rows, query }: ListUsersQueryParamsSchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -125,7 +143,92 @@ export class UserController {
 			);
 		}
 
-		return this.prismaService.user.findMany({
+		return this.prismaService.$transaction([
+			this.prismaService.user.count({
+				where: {
+					isProfessor: false,
+					OR: [
+						{
+							name: {
+								contains: query,
+							},
+						},
+						{
+							email: {
+								contains: query,
+							},
+						},
+						{
+							phone: {
+								contains: query,
+							},
+						},
+					],
+				},
+			}),
+			this.prismaService.user.findMany({
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					phone: true,
+				},
+				where: {
+					isProfessor: false,
+					OR: [
+						{
+							name: {
+								contains: query,
+							},
+						},
+						{
+							email: {
+								contains: query,
+							},
+						},
+						{
+							phone: {
+								contains: query,
+							},
+						},
+					],
+				},
+				skip: (page - 1) * rows,
+				take: rows,
+			}),
+		]);
+	}
+
+	@Get(':id')
+	async show(
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+		@Param(new ZodValidationPipe(getUserParamsSchema))
+		{ id }: GetUserParamsSchema,
+	) {
+		const currentUser = await this.prismaService.user.findUnique({
+			where: {
+				id: authenticationTokenPayload.sub,
+			},
+			select: {
+				isProfessor: true,
+				id: true,
+			},
+		});
+
+		if (!currentUser) {
+			throw new BadRequestException(
+				'Não foi possível identificar o usuário logado',
+			);
+		}
+
+		if (!currentUser.isProfessor && currentUser.id !== id) {
+			throw new ForbiddenException(
+				'Apenas professores podem visualizar outros usuários',
+			);
+		}
+
+		const user = await this.prismaService.user.findUnique({
 			select: {
 				id: true,
 				name: true,
@@ -133,8 +236,14 @@ export class UserController {
 				phone: true,
 			},
 			where: {
-				isProfessor: false,
+				id,
 			},
 		});
+
+		if (!user) {
+			throw new BadRequestException('Usuário não encontrado');
+		}
+
+		return user;
 	}
 }
