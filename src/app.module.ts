@@ -6,6 +6,7 @@ import { envSchema } from './env';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { ExerciseController } from './exercise/exercise.controller';
 import { MuscleGroupController } from './muscle-group/muscle-group.controller';
+import { RoutineController } from './routine/routine.controller';
 
 @Module({
 	imports: [
@@ -15,7 +16,7 @@ import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 		}),
 		AuthenticationModule,
 	],
-	controllers: [UserController, ExerciseController, MuscleGroupController],
+	controllers: [UserController, ExerciseController, MuscleGroupController, RoutineController],
 	providers: [PrismaService],
 })
 export class AppModule { }

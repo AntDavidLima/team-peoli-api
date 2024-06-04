@@ -15,9 +15,12 @@ model Routine {
   name         String
   startDate    DateTime  @map("start_date") @db.Date
   endDate      DateTime? @map("end_date") @db.Date
-  orientations String?
+  orientations Json?
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @map("user_id")
 
   emphasis  MuscleGroup[]
   trainings Training[]
@@ -38,6 +41,7 @@ model User {
 
   training Training[]
   workouts Workout[]
+  Routine  Routine[]
 
   @@map("user")
 }
