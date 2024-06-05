@@ -3,9 +3,13 @@ import {
 	Body,
 	ConflictException,
 	Controller,
+	Delete,
 	ForbiddenException,
 	Get,
+	HttpCode,
+	HttpStatus,
 	Param,
+	Patch,
 	Post,
 	Query,
 	UseGuards,
@@ -39,13 +43,38 @@ const getUserParamsSchema = z.object({
 
 type GetUserParamsSchema = z.infer<typeof getUserParamsSchema>;
 
+const deleteUserParamsSchema = z.object({
+	id: z.coerce.number(),
+});
+
+type DeleteUserParamsSchema = z.infer<typeof deleteUserParamsSchema>;
+
+const updateUserParamsSchema = z.object({
+	id: z.coerce.number(),
+});
+
+type UpdateUserParamsSchema = z.infer<typeof updateUserParamsSchema>;
+
 const listUsersQueryParamsSchema = z.object({
 	rows: z.coerce.number().default(10),
 	page: z.coerce.number().default(1),
-	query: z.string().optional(),
+	query: z.string().default(''),
 });
 
 type ListUsersQueryParamsSchema = z.infer<typeof listUsersQueryParamsSchema>;
+
+const updateUserBodySchema = z.object({
+	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
+	email: z
+		.string({ required_error: "O campo 'E-mail' é obrigatório" })
+		.email({ message: 'E-mail inválido' }),
+	phone: z
+		.string({ required_error: "O campo 'Telefone' é obrigatório" })
+		.length(11, { message: 'O telefone deve possuir 11 dígitos' })
+		.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
+});
+
+type UpdateUserBodySchema = z.infer<typeof updateUserBodySchema>;
 
 @Controller('user')
 @UseGuards(AuthenticationGuard)
@@ -245,5 +274,129 @@ export class UserController {
 		}
 
 		return user;
+	}
+
+	@Delete(':id')
+	@HttpCode(HttpStatus.NO_CONTENT)
+	async destroy(
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+		@Param(new ZodValidationPipe(deleteUserParamsSchema))
+		{ id }: DeleteUserParamsSchema,
+	) {
+		const currentUser = await this.prismaService.user.findUnique({
+			where: {
+				id: authenticationTokenPayload.sub,
+			},
+			select: {
+				isProfessor: true,
+			},
+		});
+
+		if (!currentUser) {
+			throw new BadRequestException(
+				'Não foi possível identificar o usuário logado',
+			);
+		}
+
+		if (!currentUser.isProfessor) {
+			throw new ForbiddenException('Apenas professores podem deletar alunos');
+		}
+
+		const user = await this.prismaService.user.findUnique({
+			select: {
+				id: true,
+			},
+			where: {
+				id,
+			},
+		});
+
+		if (!user) {
+			throw new BadRequestException('Usuário não encontrado');
+		}
+
+		await this.prismaService.user.delete({
+			where: {
+				id: user.id,
+			},
+		});
+	}
+
+	@Patch(':id')
+	async update(
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+		@Param(new ZodValidationPipe(updateUserParamsSchema))
+		{ id }: UpdateUserParamsSchema,
+		@Body(new ZodValidationPipe(updateUserBodySchema))
+		{ email, name, phone }: UpdateUserBodySchema,
+	) {
+		const currentUser = await this.prismaService.user.findUnique({
+			where: {
+				id: authenticationTokenPayload.sub,
+			},
+			select: {
+				isProfessor: true,
+				id: true,
+			},
+		});
+
+		if (!currentUser) {
+			throw new BadRequestException(
+				'Não foi possível identificar o usuário logado',
+			);
+		}
+
+		if (!currentUser.isProfessor && currentUser.id !== id) {
+			throw new ForbiddenException(
+				'Apenas professores podem editar outros alunos',
+			);
+		}
+
+		const user = await this.prismaService.user.findUnique({
+			select: {
+				id: true,
+			},
+			where: {
+				id,
+			},
+		});
+
+		if (!user) {
+			throw new BadRequestException('Usuário não encontrado');
+		}
+
+		const emailInUse = await this.prismaService.user.findFirst({
+			where: {
+				email,
+				id: {
+					not: id,
+				},
+			},
+		});
+
+		if (emailInUse) {
+			throw new ConflictException('E-mail já está em uso por outro usuário');
+		}
+
+		const updatedUser = await this.prismaService.user.update({
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				phone: true,
+			},
+			data: {
+				email,
+				name,
+				phone,
+			},
+			where: {
+				id,
+			},
+		});
+
+		return updatedUser;
 	}
 }
