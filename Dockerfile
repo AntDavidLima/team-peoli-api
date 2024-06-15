@@ -19,7 +19,6 @@ RUN mkdir prisma
 
 COPY --from=BUILDER /tmp/team-peoli-api/dist dist
 COPY --from=BUILDER /tmp/team-peoli-api/prisma prisma
-COPY --from=BUILDER /tmp/team-peoli-api/.env .
 COPY --from=BUILDER /tmp/team-peoli-api/package*.json .
 
 RUN npm install --only-prod 
