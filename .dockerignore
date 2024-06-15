@@ -1,0 +1,13 @@
+.docker
+.git
+dist
+docs
+node_modules
+test
+.dockerignore
+.env.example
+.eslintrc.js
+.gitignore
+.prettierrc
+docker-compose.yml
+Dockerfile

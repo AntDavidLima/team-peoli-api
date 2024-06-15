@@ -11,6 +11,16 @@ services:
     env_file:
       - .env
     restart: on-failure
+  api:
+    container_name: 'team-peoli-api'
+    build: .
+    ports:
+      - '3000:3000'
+    networks:
+      - team-peoli
+    depends_on:
+      - postgres
+    restart: no
 
 networks:
   team-peoli:
