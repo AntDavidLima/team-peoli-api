@@ -13,14 +13,14 @@ services:
     restart: on-failure
   api:
     container_name: 'team-peoli-api'
-    build: .
+    image: 851725455120.dkr.ecr.sa-east-1.amazonaws.com/team-peoli:latest
     ports:
       - '3000:3000'
     networks:
       - team-peoli
     depends_on:
       - postgres
-    restart: no
+    restart: on-failure
 
 networks:
   team-peoli:
