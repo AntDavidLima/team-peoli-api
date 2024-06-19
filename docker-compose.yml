@@ -9,11 +9,21 @@ services:
     env_file:
       - .env
     restart: on-failure
+    networks:
+      - team-peoli
   api:
     container_name: 'team-peoli-api'
-    image: 851725455120.dkr.ecr.sa-east-1.amazonaws.com/team-peoli:latest
+    build: .
     ports:
       - '3000:3000'
+    env_file:
+      - .env
     depends_on:
       - postgres
     restart: on-failure
+    networks:
+      - team-peoli
+
+networks:
+  team-peoli:
+    driver: bridge
