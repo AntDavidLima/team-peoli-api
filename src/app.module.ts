@@ -7,6 +7,7 @@ import { AuthenticationModule } from './authentication/authentication.module';
 import { ExerciseController } from './exercise/exercise.controller';
 import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 import { RoutineController } from './routine/routine.controller';
+import { MeController } from './me/me.controller';
 
 @Module({
 	imports: [
@@ -16,7 +17,13 @@ import { RoutineController } from './routine/routine.controller';
 		}),
 		AuthenticationModule,
 	],
-	controllers: [UserController, ExerciseController, MuscleGroupController, RoutineController],
+	controllers: [
+		UserController,
+		ExerciseController,
+		MuscleGroupController,
+		RoutineController,
+		MeController,
+	],
 	providers: [PrismaService],
 })
 export class AppModule { }
