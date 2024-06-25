@@ -45,6 +45,27 @@ const listRoutinesQueryParamsSchema = z.object({
 	userId: z.coerce.number({
 		required_error: 'Não foi possível identificar o aluno',
 	}),
+	day: z
+		.enum(
+			[
+				'SUNDAY',
+				'MONDAY',
+				'TUESDAY',
+				'WEDNESDAY',
+				'THURSDAY',
+				'FRIDAY',
+				'SATURDAY',
+			],
+			{
+				errorMap: (issue) => ({
+					message:
+						issue.code === 'invalid_enum_value'
+							? 'Dia inválido'
+							: issue.message!,
+				}),
+			},
+		)
+		.optional(),
 });
 
 type ListRoutinesQueryParamsSchema = z.infer<
@@ -61,7 +82,7 @@ export class RoutineController {
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 		@Query(new ZodValidationPipe(listRoutinesQueryParamsSchema))
-		{ userId }: ListRoutinesQueryParamsSchema,
+		{ userId, day }: ListRoutinesQueryParamsSchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -108,6 +129,30 @@ export class RoutineController {
 				startDate: true,
 				endDate: true,
 				orientations: true,
+				trainings: {
+					select: {
+						id: true,
+						name: true,
+						exercises: {
+							select: {
+								sets: true,
+								reps: true,
+								orientations: true,
+								restTime: true,
+								exercise: {
+									select: {
+										id: true,
+										name: true,
+										executionVideoUrl: true,
+									},
+								},
+							},
+						},
+					},
+					where: {
+						day,
+					},
+				},
 			},
 		});
 
