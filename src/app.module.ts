@@ -8,6 +8,7 @@ import { ExerciseController } from './exercise/exercise.controller';
 import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 import { RoutineController } from './routine/routine.controller';
 import { MeController } from './me/me.controller';
+import { TrainingController } from './training/training.controller';
 
 @Module({
 	imports: [
@@ -23,6 +24,7 @@ import { MeController } from './me/me.controller';
 		MuscleGroupController,
 		RoutineController,
 		MeController,
+		TrainingController,
 	],
 	providers: [PrismaService],
 })
