@@ -9,23 +9,25 @@ import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 import { RoutineController } from './routine/routine.controller';
 import { MeController } from './me/me.controller';
 import { TrainingController } from './training/training.controller';
+import { WorkoutModule } from './workout/workout.module';
 
 @Module({
-	imports: [
-		ConfigModule.forRoot({
-			validate: (env) => envSchema.parse(env),
-			isGlobal: true,
-		}),
-		AuthenticationModule,
-	],
-	controllers: [
-		UserController,
-		ExerciseController,
-		MuscleGroupController,
-		RoutineController,
-		MeController,
-		TrainingController,
-	],
-	providers: [PrismaService],
+  imports: [
+    ConfigModule.forRoot({
+      validate: (env) => envSchema.parse(env),
+      isGlobal: true,
+    }),
+    AuthenticationModule,
+    WorkoutModule,
+  ],
+  controllers: [
+    UserController,
+    ExerciseController,
+    MuscleGroupController,
+    RoutineController,
+    MeController,
+    TrainingController,
+  ],
+  providers: [PrismaService],
 })
-export class AppModule { }
+export class AppModule {}
