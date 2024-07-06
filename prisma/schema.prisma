@@ -39,7 +39,6 @@ model User {
   updatedAt       DateTime @updatedAt @map("updated_at")
   isProfessor     Boolean  @default(false) @map("is_professor")
 
-  training Training[]
   workouts Workout[]
   Routine  Routine[]
 
@@ -98,12 +97,9 @@ model Training {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  routine   Routine? @relation(fields: [routineId], references: [id])
-  routineId Int?     @map("routine_id")
-
   exercises TrainingExercise[]
   workouts  Workout[]
-  students  User[]
+  routines  Routine[]
 
   @@map("training")
 }
@@ -167,7 +163,7 @@ model WorkoutExerciseSets {
   reps Int @db.SmallInt
   load Int @db.SmallInt
 
-  workoutExercise  WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
   workoutExerciseId Int             @map("workout_exercise_id")
 
   @@map("workout_exercise_sets")

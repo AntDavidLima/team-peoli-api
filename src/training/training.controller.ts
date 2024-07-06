@@ -52,7 +52,7 @@ export class TrainingController {
 				id,
 			},
 			select: {
-				routine: {
+				routines: {
 					select: {
 						userId: true,
 					},
@@ -75,10 +75,11 @@ export class TrainingController {
 			},
 		});
 
-		if (
-			!currentUser.isProfessor &&
-			currentUser.id !== training?.routine?.userId
-		) {
+		const trainingBelongsToCurrentUser = training?.routines.some(
+			(routine) => routine.userId === currentUser.id,
+		);
+
+		if (!currentUser.isProfessor && !trainingBelongsToCurrentUser) {
 			throw new ForbiddenException(
 				'Somente professores podem visualizar treinos de outros alunos',
 			);
