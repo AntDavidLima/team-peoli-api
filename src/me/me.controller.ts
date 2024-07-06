@@ -25,6 +25,7 @@ export class MeController {
 			},
 			select: {
 				id: true,
+				name: true,
 			},
 		});
 
