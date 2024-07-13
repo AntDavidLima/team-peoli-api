@@ -106,7 +106,7 @@ model Training {
 
 model TrainingExercise {
   sets         Int      @db.SmallInt
-  reps         Int      @db.SmallInt
+  reps         String
   orientations Json?
   restTime     Int?     @map("rest_time")
   createdAt    DateTime @default(now()) @map("created_at")
