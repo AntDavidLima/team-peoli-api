@@ -48,6 +48,10 @@ const createExerciseBodySchema = z.object({
 		.min(1, {
 			message: 'Cada exercício deve possuir pelo menos um grupo muscular',
 		}),
+	executionVideoUrl: z
+		.string()
+		.url('Url do vídeo de execução inválida')
+		.optional(),
 });
 
 type CreateExerciseBodySchema = z.infer<typeof createExerciseBodySchema>;
@@ -94,6 +98,10 @@ const updateExerciseBodySchema = z.object({
 		.min(1, {
 			message: 'Cada exercício deve possuir pelo menos um grupo muscular',
 		}),
+	executionVideoUrl: z
+		.string()
+		.url('Url do vídeo de execução inválida')
+		.optional(),
 });
 
 type UpdateExerciseBodySchema = z.infer<typeof updateExerciseBodySchema>;
@@ -106,7 +114,13 @@ export class ExerciseController {
 	@Post()
 	async store(
 		@Body(new ZodValidationPipe(createExerciseBodySchema))
-		{ name, instructions, restTime, muscleGroups }: CreateExerciseBodySchema,
+		{
+			name,
+			instructions,
+			restTime,
+			muscleGroups,
+			executionVideoUrl,
+		}: CreateExerciseBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -148,6 +162,7 @@ export class ExerciseController {
 		return await this.prismaService.exercise.create({
 			data: {
 				name,
+				executionVideoUrl,
 				instructions,
 				restTime,
 				muscleGroups: {
@@ -338,7 +353,13 @@ export class ExerciseController {
 		@Param(new ZodValidationPipe(updateExerciseParamsSchema))
 		{ id }: UpdateExerciseParamsSchema,
 		@Body(new ZodValidationPipe(updateExerciseBodySchema))
-		{ name, restTime, instructions, muscleGroups }: UpdateExerciseBodySchema,
+		{
+			name,
+			restTime,
+			instructions,
+			muscleGroups,
+			executionVideoUrl,
+		}: UpdateExerciseBodySchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -379,6 +400,7 @@ export class ExerciseController {
 			data: {
 				name,
 				instructions,
+				executionVideoUrl,
 				restTime,
 				muscleGroups: {
 					deleteMany: {
