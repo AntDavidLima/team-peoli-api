@@ -7,10 +7,15 @@ on:
 jobs:
   build:
     runs-on: self-hosted
+    defaults:
+      run:
+        working-directory: /home/admin/api
 
     steps:
       - uses: actions/checkout@v4
       - name: Build docker image
         run: docker buildx build . --tag team-peoli-api
       - name: Run image
-        run: docker run --name team-peoli-api team-peoli-api-app
+        run: docker run --name team-peoli-api team-peoli-api
+      - name: Clean up
+        run: ls | grep -xvE ".docker|.env" | xargs rm -r
