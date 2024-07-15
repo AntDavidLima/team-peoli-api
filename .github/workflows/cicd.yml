@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: '/home/admin/api'
       - name: Build docker image
         run: docker buildx build . --tag team-peoli-api
       - name: Run image
