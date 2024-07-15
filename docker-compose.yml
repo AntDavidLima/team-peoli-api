@@ -9,9 +9,9 @@ services:
     env_file:
       - .env
     restart: on-failure
-  api:
+  app:
     container_name: 'team-peoli-api'
-    image: 851725455120.dkr.ecr.sa-east-1.amazonaws.com/team-peoli:latest
+    build: .
     ports:
       - '3000:3000'
     depends_on:
