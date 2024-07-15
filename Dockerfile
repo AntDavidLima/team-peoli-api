@@ -1,4 +1,4 @@
-FROM node:21-alpine as BUILDER
+FROM node:alpine as builder
 
 WORKDIR /tmp/team-peoli-api
 
@@ -17,9 +17,10 @@ WORKDIR /usr/src/team-peoli-api
 RUN mkdir dist
 RUN mkdir prisma
 
-COPY --from=BUILDER /tmp/team-peoli-api/dist dist
-COPY --from=BUILDER /tmp/team-peoli-api/prisma prisma
-COPY --from=BUILDER /tmp/team-peoli-api/package*.json .
+COPY --from=builder /tmp/team-peoli-api/dist dist
+COPY --from=builder /tmp/team-peoli-api/prisma prisma
+COPY --from=builder /tmp/team-peoli-api/package*.json .
+COPY --from=builder /tmp/team-peoli-api/.env .
 
 RUN npm install --only-prod
 

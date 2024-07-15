@@ -5,13 +5,11 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - .docker/postgres:/bitnami/postgresql
+      - postgres:/bitnami/postgresql
     env_file:
       - .env
     restart: on-failure
-    networks:
-      - team-peoli
-  api:
+  team-peoli:
     container_name: 'team-peoli-api'
     build: .
     ports:
@@ -21,9 +19,6 @@ services:
     depends_on:
       - postgres
     restart: on-failure
-    networks:
-      - team-peoli
 
-networks:
-  team-peoli:
-    driver: bridge
+volumes:
+  postgres:
