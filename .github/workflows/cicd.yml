@@ -14,7 +14,7 @@ jobs:
         run: rsync --remove-source-files -r ./ /home/admin/api
       - name: Build docker and run image
         working-directory: /home/admin/api
-        run: docker compose up
+        run: docker compose up -d
       - name: Clean up
         working-directory: /home/admin/api
         run: ls | grep -xvE ".docker|.env" | xargs rm -r
