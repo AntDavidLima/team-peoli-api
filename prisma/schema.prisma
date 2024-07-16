@@ -39,7 +39,6 @@ model User {
   updatedAt       DateTime @updatedAt @map("updated_at")
   isProfessor     Boolean  @default(false) @map("is_professor")
 
-  training Training[]
   workouts Workout[]
   Routine  Routine[]
 
@@ -98,20 +97,17 @@ model Training {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  routine   Routine? @relation(fields: [routineId], references: [id])
-  routineId Int?     @map("routine_id")
-
   exercises TrainingExercise[]
   workouts  Workout[]
-  students  User[]
+  routines  Routine[]
 
   @@map("training")
 }
 
 model TrainingExercise {
   sets         Int      @db.SmallInt
-  reps         Int      @db.SmallInt
-  orientations String?
+  reps         String
+  orientations Json?
   restTime     Int?     @map("rest_time")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -127,13 +123,13 @@ model TrainingExercise {
 }
 
 model Workout {
-  id        Int       @id @default(autoincrement())
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id        Int        @id @default(autoincrement())
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
   feedback  String?
-  intensity Intensity
-  startTime DateTime  @map("start_time")
-  endTime   DateTime? @map("end_time")
+  intensity Intensity?
+  startTime DateTime   @map("start_time")
+  endTime   DateTime?  @map("end_time")
 
   training   Training @relation(fields: [trainingId], references: [id])
   trainingId Int      @map("training_id")
@@ -147,9 +143,7 @@ model Workout {
 }
 
 model WorkoutExercise {
-  sets      Int      @db.SmallInt
-  reps      Int      @db.SmallInt
-  load      Int      @db.SmallInt
+  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -159,8 +153,20 @@ model WorkoutExercise {
   workout   Workout? @relation(fields: [workoutId], references: [id])
   workoutId Int      @map("workout_id")
 
-  @@id([exerciseId, workoutId])
+  WorkoutExerciseSets WorkoutExerciseSets[]
+
   @@map("workout_exercise")
+}
+
+model WorkoutExerciseSets {
+  id   Int @id @default(autoincrement())
+  reps Int @db.SmallInt
+  load Int @db.SmallInt
+
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
+  workoutExerciseId Int             @map("workout_exercise_id")
+
+  @@map("workout_exercise_sets")
 }
 
 enum Day {

@@ -10,7 +10,7 @@ COPY . .
 
 RUN npm run build
 
-FROM node:alpine
+FROM node:21-alpine
 
 WORKDIR /usr/src/team-peoli-api
 
@@ -22,7 +22,7 @@ COPY --from=builder /tmp/team-peoli-api/prisma prisma
 COPY --from=builder /tmp/team-peoli-api/package*.json .
 COPY --from=builder /tmp/team-peoli-api/.env .
 
-RUN npm install --only-prod 
+RUN npm install --only-prod
 
 EXPOSE 3000
 
