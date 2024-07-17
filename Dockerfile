@@ -1,4 +1,18 @@
-FROM node:alpine as builder
+ARG APPLICATION_PORT
+ARG ENCRYPTION_ROUNDS
+ARG JWT_PRIVATE_KEY
+ARG JWT_PUBLIC_KEY
+ARG CLIENT_URL
+ARG DATABASE_URL
+
+FROM node:alpine AS builder
+
+ENV APPLICATION_PORT=$APPLICATION_PORT
+ENV ENCRYPTION_ROUNDS=$ENCRYPTION_ROUNDS
+ENV JWT_PRIVATE_KEY=$JWT_PRIVATE_KEY
+ENV JWT_PUBLIC_KEY=$JWT_PUBLIC_KEY
+ENV CLIENT_URL=$CLIENT_URL
+ENV DATABASE_URL=$DATABASE_URL
 
 WORKDIR /tmp/team-peoli-api
 
@@ -23,6 +37,8 @@ COPY --from=builder /tmp/team-peoli-api/package*.json .
 COPY --from=builder /tmp/team-peoli-api/.env .
 
 RUN npm install --only-prod
+
+RUN npx prisma generate
 
 EXPOSE 3000
 
