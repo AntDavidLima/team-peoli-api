@@ -6,6 +6,8 @@ on:
 
 env:
   DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
+  APPLICATION_PORT: 3000
+  CLIENT_URL: http://teampeoli.com
 
 jobs:
   build:
