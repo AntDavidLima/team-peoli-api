@@ -4,17 +4,65 @@ on:
   push:
     branches: ['main']
 
+env:
+  DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
+
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - name: Copy files to the right path
-        run: rsync --remove-source-files -r ./ /home/admin/api
-      - name: Build docker and run image
-        working-directory: /home/admin/api
-        run: docker compose up -d
+      - name: Build docker image
+        run: |
+          docker buildx build .
+          --tag team-peoli-api
+          --build-arg ENCRYPTION_ROUNDS=${{ secrets.ENCRYPTION_ROUNDS }}
+          --build-arg JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }}
+          --build-arg JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }}
+          --build-arg DATABASE_URL=${{ env.DATABASE_URL }}
+          --build-arg APPLICATION_PORT=${{ env.APPLICATION_PORT }}
+          --build-arg CLIENT_URL${{ env.CLIENT_URL }}
+      - name: Save docker image to file
+        run: docker save --output api-image.tar team-peoli-api:latest
+      - name: Prepare server for new image
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: docker rm team-peoli-api
+      - name: Copy image to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          port: ${{ secrets.EC2_PORT }}
+          key: ${{ secrets.EC2_KEY }}
+          source: "api-image.tar"
+          target: /home/admin/api
+      - name: Load image
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: docker load --input /home/admin/api/api-image.tar
+      - name: Run container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: docker run --name team-peoli-api team-peoli-api:latest
       - name: Clean up
-        working-directory: /home/admin/api
-        run: ls | grep -xvE ".docker|.env" | xargs rm -r
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: rm -r /home/admin/api
