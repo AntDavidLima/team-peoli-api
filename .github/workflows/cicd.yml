@@ -60,7 +60,7 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           port: ${{ secrets.EC2_PORT }}
           script: |
-            docker run --name team-peoli-api \
+            docker run -d --name team-peoli-api \
             -e ENCRYPTION_ROUNDS=${{ secrets.ENCRYPTION_ROUNDS }} \
             -e JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }} \
             -e JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} \
