@@ -5,7 +5,7 @@ on:
     branches: ['main']
 
 env:
-  DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@0.0.0.0:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
+  DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
 
 jobs:
   build:
@@ -65,6 +65,7 @@ jobs:
             -e DATABASE_URL=${{ env.DATABASE_URL }} \
             -e APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
             -e CLIENT_URL${{ env.CLIENT_URL }} \
+            --network=host \
             team-peoli-api:latest
       - name: Clean up
         uses: appleboy/ssh-action@v1.0.3
