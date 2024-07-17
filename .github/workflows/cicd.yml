@@ -5,7 +5,7 @@ on:
     branches: ['main']
 
 env:
-  DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
+  DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@0.0.0.0:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
 
 jobs:
   build:
