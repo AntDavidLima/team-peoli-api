@@ -14,15 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build docker image
-        run: |
-          docker buildx build . \
-          --tag team-peoli-api \
-          --build-arg ENCRYPTION_ROUNDS=${{ secrets.ENCRYPTION_ROUNDS }} \
-          --build-arg JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }} \
-          --build-arg JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} \
-          --build-arg DATABASE_URL=${{ env.DATABASE_URL }} \
-          --build-arg APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
-          --build-arg CLIENT_URL${{ env.CLIENT_URL }}
+        run: docker buildx build . --tag team-peoli-api
       - name: Save docker image to file
         run: docker save team-peoli-api:latest > api-image.tar
       - name: Stop previusly running container
@@ -65,7 +57,15 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
           port: ${{ secrets.EC2_PORT }}
-          script: docker run --name team-peoli-api team-peoli-api:latest
+          script: |
+            docker run team-peoli-api:latest \
+            --name team-peoli-api
+            -e ENCRYPTION_ROUNDS=${{ secrets.ENCRYPTION_ROUNDS }} \
+            -e JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }} \
+            -e JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} \
+            -e DATABASE_URL=${{ env.DATABASE_URL }} \
+            -e APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
+            -e CLIENT_URL${{ env.CLIENT_URL }}
       - name: Clean up
         uses: appleboy/ssh-action@v1.0.3
         with:
