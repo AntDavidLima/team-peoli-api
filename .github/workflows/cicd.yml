@@ -25,14 +25,22 @@ jobs:
           --build-arg CLIENT_URL${{ env.CLIENT_URL }}
       - name: Save docker image to file
         run: docker save --output api-image.tar team-peoli-api:latest
-      - name: Prepare server for new image
+      - name: Stop previusly running container
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_KEY }}
           port: ${{ secrets.EC2_PORT }}
-          script: docker rm team-peoli-api
+          script: docker stop team-peoli-api 2>/dev/null || true
+      - name: Remove old container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: docker rm team-peoli-api 2>/dev/null || true
       - name: Copy image to server
         uses: appleboy/scp-action@v0.1.7
         with:
