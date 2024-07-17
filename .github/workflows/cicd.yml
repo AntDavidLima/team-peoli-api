@@ -24,7 +24,7 @@ jobs:
           --build-arg APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
           --build-arg CLIENT_URL${{ env.CLIENT_URL }}
       - name: Save docker image to file
-        run: docker save --output api-image.tar team-peoli-api:latest
+        run: docker save team-peoli-api:latest > api-image.tar
       - name: Stop previusly running container
         uses: appleboy/ssh-action@v1.0.3
         with:
