@@ -66,7 +66,7 @@ jobs:
             -e JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }} \
             -e DATABASE_URL=${{ env.DATABASE_URL }} \
             -e APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
-            -e CLIENT_URL${{ env.CLIENT_URL }} \
+            -e CLIENT_URL=${{ env.CLIENT_URL }} \
             --network=host \
             team-peoli-api:latest
       - name: Clean up
