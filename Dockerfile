@@ -1,4 +1,4 @@
-FROM node:alpine AS builder
+FROM node:20.15-alpine AS builder
 
 WORKDIR /tmp/team-peoli-api
 
