@@ -89,6 +89,18 @@ export class InProgressController {
 			select: {
 				id: true,
 				startTime: true,
+				exercises: {
+					select: {
+						exerciseId: true,
+						WorkoutExerciseSets: {
+							select: {
+								id: true,
+								load: true,
+								reps: true,
+							},
+						},
+					},
+				},
 			},
 		});
 

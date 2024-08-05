@@ -29,6 +29,15 @@ const upadteWorkoutParamsSchema = z.object({
 
 type UpdateWorkoutParamsSchema = z.infer<typeof upadteWorkoutParamsSchema>;
 
+const upadteWorkoutBodySchema = z.object({
+	exerciseId: z.coerce.number(),
+	reps: z.coerce.number(),
+	load: z.coerce.number(),
+	setId: z.coerce.number().optional(),
+});
+
+type UpdateWorkoutBodySchema = z.infer<typeof upadteWorkoutBodySchema>;
+
 @Controller('workout')
 @UseGuards(AuthenticationGuard)
 export class WorkoutController {
@@ -38,6 +47,8 @@ export class WorkoutController {
 	async update(
 		@Param(new ZodValidationPipe(upadteWorkoutParamsSchema))
 		{ id }: UpdateWorkoutParamsSchema,
+		@Body(new ZodValidationPipe(upadteWorkoutBodySchema))
+		{ exerciseId, load, reps, setId }: UpdateWorkoutBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -72,7 +83,22 @@ export class WorkoutController {
 
 		if (workout.studentId !== currentUser.id) {
 			throw new BadRequestException(
-				'Você não tem permissão para finalizar este treino',
+				'Você não tem permissão para atualizar este treino',
+			);
+		}
+
+		const exercise = await this.prismaService.exercise.findUnique({
+			where: {
+				id: exerciseId,
+			},
+			select: {
+				id: true,
+			},
+		});
+
+		if (!exercise) {
+			throw new BadRequestException(
+				'Não foi possível identificar o exercício a ser atualizado',
 			);
 		}
 
@@ -81,12 +107,53 @@ export class WorkoutController {
 				id: workout.id,
 			},
 			data: {
-				endTime: new Date(),
+				exercises: {
+					upsert: {
+						where: {
+							workoutId_exerciseId: {
+								exerciseId: exercise.id,
+								workoutId: workout.id,
+							},
+						},
+						create: {
+							exerciseId: exercise.id,
+							WorkoutExerciseSets: {
+								create: {
+									load,
+									reps,
+								},
+							},
+						},
+						update: {
+							WorkoutExerciseSets: {
+								upsert: {
+									where: {
+										id: setId || 0,
+									},
+									create: {
+										load,
+										reps,
+									},
+									update: {
+										load,
+										reps,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			select: {
-				id: true,
-				endTime: true,
-				startTime: true,
+				exercises: {
+					select: {
+						WorkoutExerciseSets: {
+							select: {
+								id: true,
+							},
+						},
+					},
+				},
 			},
 		});
 
