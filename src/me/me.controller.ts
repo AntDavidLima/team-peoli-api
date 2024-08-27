@@ -26,6 +26,9 @@ export class MeController {
 			select: {
 				id: true,
 				name: true,
+				lastPasswordChange: true,
+				email: true,
+				phone: true,
 			},
 		});
 

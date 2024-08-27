@@ -72,6 +72,7 @@ const updateUserBodySchema = z.object({
 		.string({ required_error: "O campo 'Telefone' é obrigatório" })
 		.length(11, { message: 'O telefone deve possuir 11 dígitos' })
 		.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
+	newPassword: z.string().min(8).optional(),
 });
 
 type UpdateUserBodySchema = z.infer<typeof updateUserBodySchema>;
@@ -330,7 +331,7 @@ export class UserController {
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone }: UpdateUserBodySchema,
+		{ email, name, phone, newPassword }: UpdateUserBodySchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -357,6 +358,7 @@ export class UserController {
 		const user = await this.prismaService.user.findUnique({
 			select: {
 				id: true,
+				lastPasswordChange: true,
 			},
 			where: {
 				id,
@@ -380,6 +382,16 @@ export class UserController {
 			throw new ConflictException('E-mail já está em uso por outro usuário');
 		}
 
+		if (newPassword && user.lastPasswordChange) {
+			throw new BadRequestException(
+				'Informe a senha atual para poder alterala',
+			);
+		}
+
+		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
+			infer: true,
+		});
+
 		const updatedUser = await this.prismaService.user.update({
 			select: {
 				id: true,
@@ -391,6 +403,8 @@ export class UserController {
 				email,
 				name,
 				phone,
+				password: newPassword ? await hash(newPassword, rounds) : undefined,
+				lastPasswordChange: newPassword ? new Date() : undefined,
 			},
 			where: {
 				id,
