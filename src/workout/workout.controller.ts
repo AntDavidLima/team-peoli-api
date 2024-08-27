@@ -15,10 +15,12 @@ import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 
 const createWorkoutBodySchema = z.object({
-	trainingId: z.coerce.number({
-		required_error:
-			'Não foi possível identificar o treino a que este exercício pertence',
-	}),
+	trainingIds: z.array(
+		z.coerce.number({
+			required_error:
+				'Não foi possível identificar o treino a que este exercício pertence',
+		}),
+	),
 });
 
 type CreateWorkoutBodySchema = z.infer<typeof createWorkoutBodySchema>;
@@ -163,7 +165,7 @@ export class WorkoutController {
 	@Post()
 	async store(
 		@Body(new ZodValidationPipe(createWorkoutBodySchema))
-		{ trainingId }: CreateWorkoutBodySchema,
+		{ trainingIds }: CreateWorkoutBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -182,26 +184,30 @@ export class WorkoutController {
 			);
 		}
 
-		const training = await this.prismaService.training.findUnique({
+		const trainings = await this.prismaService.training.findMany({
 			where: {
-				id: trainingId,
+				id: { in: trainingIds },
 			},
 			select: {
 				id: true,
 			},
 		});
 
-		if (!training) {
+		if (trainings.length !== trainingIds.length) {
 			throw new BadRequestException(
-				'Não foi possível identificar o treino a que este exercício pertence',
+				'Um ou mais treinos não puderam ser identificados',
 			);
 		}
 
 		return await this.prismaService.workout.create({
 			data: {
 				startTime: new Date(),
-				trainingId: training.id,
 				studentId: currentUser.id,
+				trainings: {
+					connect: trainings.map((training) => ({
+						id: training.id,
+					})),
+				},
 			},
 			select: {
 				id: true,
