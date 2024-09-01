@@ -23,6 +23,10 @@ import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { compile } from 'handlebars';
+import { NodemailerService } from 'src/nodemailer/nodemailer.service';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 const createUserBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
@@ -83,6 +87,7 @@ export class UserController {
 	constructor(
 		private prismaService: PrismaService,
 		private configService: ConfigService<Env, true>,
+		private nodemailerService: NodemailerService,
 	) { }
 
 	@Post()
@@ -129,7 +134,7 @@ export class UserController {
 
 		const passwordHash = await hash(password, rounds);
 
-		return this.prismaService.user.create({
+		const user = this.prismaService.user.create({
 			data: {
 				email,
 				name,
@@ -143,6 +148,31 @@ export class UserController {
 				id: true,
 			},
 		});
+
+		const passwordEmailTemplateFile = readFileSync(
+			resolve(
+				process.cwd(),
+				'src',
+				'templates',
+				'user',
+				'password',
+				'password.template.hbs',
+			),
+			'utf-8',
+		);
+
+		const passwordEmailTemplate = compile(passwordEmailTemplateFile);
+
+		const passwordEmail = passwordEmailTemplate({ password });
+
+		await this.nodemailerService.sendMail({
+			mailSender: 'Team Peoli <contato@teampeoli.com>',
+			mailReceiver: email,
+			subject: 'Bem vindo ao Team Peoli',
+			body: passwordEmail,
+		});
+
+		return user;
 	}
 
 	@Get()
