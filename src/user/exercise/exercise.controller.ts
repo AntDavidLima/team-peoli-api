@@ -76,6 +76,22 @@ export class ExerciseController {
 						},
 					},
 				},
+				workouts: {
+					some: {
+						WorkoutExerciseSets: {
+							some: {
+								AND: {
+									reps: {
+										not: undefined,
+									},
+									load: {
+										not: undefined,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 			select: {
 				id: true,
