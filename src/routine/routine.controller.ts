@@ -216,6 +216,9 @@ export class RoutineController {
 					},
 					where: {
 						day,
+						name: {
+							not: null,
+						},
 					},
 				},
 			},
