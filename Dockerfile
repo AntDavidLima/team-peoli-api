@@ -23,7 +23,7 @@ COPY --from=builder /tmp/team-peoli-api/package*.json .
 
 RUN mkdir dist/user/password
 
-COPY --from=builder /tmp/team-peoli-api/src/user/password/password.template.hbs
+COPY --from=builder /tmp/team-peoli-api/src/user/password/password.template.hbs dist/user/password
 
 RUN npm install --only-prod
 
