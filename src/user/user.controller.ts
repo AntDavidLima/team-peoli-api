@@ -15,7 +15,7 @@ import {
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
@@ -67,17 +67,23 @@ const listUsersQueryParamsSchema = z.object({
 
 type ListUsersQueryParamsSchema = z.infer<typeof listUsersQueryParamsSchema>;
 
-const updateUserBodySchema = z.object({
-	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	email: z
-		.string({ required_error: "O campo 'E-mail' é obrigatório" })
-		.email({ message: 'E-mail inválido' }),
-	phone: z
-		.string({ required_error: "O campo 'Telefone' é obrigatório" })
-		.length(11, { message: 'O telefone deve possuir 11 dígitos' })
-		.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
-	newPassword: z.string().min(8).optional(),
-});
+const updateUserBodySchema = z
+	.object({
+		name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
+		email: z
+			.string({ required_error: "O campo 'E-mail' é obrigatório" })
+			.email({ message: 'E-mail inválido' }),
+		phone: z
+			.string({ required_error: "O campo 'Telefone' é obrigatório" })
+			.length(11, { message: 'O telefone deve possuir 11 dígitos' })
+			.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
+		newPassword: z.string().min(8).optional(),
+		currentPassword: z.string().min(8).optional(),
+	})
+	.refine(
+		(schema) => !(schema.newPassword && !schema.name),
+		'Informe sua senha atual para poder alterá-la',
+	);
 
 type UpdateUserBodySchema = z.infer<typeof updateUserBodySchema>;
 
@@ -361,7 +367,7 @@ export class UserController {
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone, newPassword }: UpdateUserBodySchema,
+		{ email, name, phone, newPassword, currentPassword }: UpdateUserBodySchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -389,6 +395,7 @@ export class UserController {
 			select: {
 				id: true,
 				lastPasswordChange: true,
+				password: true,
 			},
 			where: {
 				id,
@@ -413,9 +420,11 @@ export class UserController {
 		}
 
 		if (newPassword && user.lastPasswordChange) {
-			throw new BadRequestException(
-				'Informe a senha atual para poder alterala',
-			);
+			const passwordMatch = await compare(currentPassword!, user.password);
+
+			if (!passwordMatch) {
+				throw new BadRequestException('Senha atual incorreta');
+			}
 		}
 
 		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
