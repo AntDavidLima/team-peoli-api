@@ -157,10 +157,7 @@ export class UserController {
 
 		const passwordEmailTemplateFile = readFileSync(
 			resolve(
-				process.cwd(),
-				'src',
-				'templates',
-				'user',
+				__dirname,
 				'password',
 				'password.template.hbs',
 			),
