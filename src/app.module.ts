@@ -10,6 +10,8 @@ import { MeController } from './me/me.controller';
 import { TrainingController } from './training/training.controller';
 import { WorkoutModule } from './workout/workout.module';
 import { UserModule } from './user/user.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { NodemailerService } from './nodemailer/nodemailer.service';
 
 @Module({
 	imports: [
@@ -20,6 +22,7 @@ import { UserModule } from './user/user.module';
 		AuthenticationModule,
 		WorkoutModule,
 		UserModule,
+		PrismaModule,
 	],
 	controllers: [
 		ExerciseController,
@@ -28,6 +31,6 @@ import { UserModule } from './user/user.module';
 		MeController,
 		TrainingController,
 	],
-	providers: [PrismaService],
+	providers: [PrismaService, NodemailerService],
 })
 export class AppModule { }

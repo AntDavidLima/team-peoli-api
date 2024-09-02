@@ -29,15 +29,16 @@ model Routine {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
-  email           String   @unique
-  name            String
-  password        String
-  phone           String   @db.VarChar(11)
-  profilePhotoUrl String?  @map("profile_photo_url")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  isProfessor     Boolean  @default(false) @map("is_professor")
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique
+  name               String
+  password           String
+  phone              String    @db.VarChar(11)
+  profilePhotoUrl    String?   @map("profile_photo_url")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  isProfessor        Boolean   @default(false) @map("is_professor")
+  lastPasswordChange DateTime? @map("last_password_change")
 
   workouts Workout[]
   Routine  Routine[]
@@ -131,8 +132,7 @@ model Workout {
   startTime DateTime   @map("start_time")
   endTime   DateTime?  @map("end_time")
 
-  training   Training @relation(fields: [trainingId], references: [id])
-  trainingId Int      @map("training_id")
+  trainings Training[]
 
   exercises WorkoutExercise[]
 
@@ -155,6 +155,7 @@ model WorkoutExercise {
 
   WorkoutExerciseSets WorkoutExerciseSets[]
 
+  @@unique([workoutId, exerciseId])
   @@map("workout_exercise")
 }
 

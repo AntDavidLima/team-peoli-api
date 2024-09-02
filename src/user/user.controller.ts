@@ -15,7 +15,7 @@ import {
 	UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
@@ -23,6 +23,10 @@ import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { compile } from 'handlebars';
+import { NodemailerService } from 'src/nodemailer/nodemailer.service';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 const createUserBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
@@ -63,16 +67,23 @@ const listUsersQueryParamsSchema = z.object({
 
 type ListUsersQueryParamsSchema = z.infer<typeof listUsersQueryParamsSchema>;
 
-const updateUserBodySchema = z.object({
-	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	email: z
-		.string({ required_error: "O campo 'E-mail' é obrigatório" })
-		.email({ message: 'E-mail inválido' }),
-	phone: z
-		.string({ required_error: "O campo 'Telefone' é obrigatório" })
-		.length(11, { message: 'O telefone deve possuir 11 dígitos' })
-		.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
-});
+const updateUserBodySchema = z
+	.object({
+		name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
+		email: z
+			.string({ required_error: "O campo 'E-mail' é obrigatório" })
+			.email({ message: 'E-mail inválido' }),
+		phone: z
+			.string({ required_error: "O campo 'Telefone' é obrigatório" })
+			.length(11, { message: 'O telefone deve possuir 11 dígitos' })
+			.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
+		newPassword: z.string().min(8).optional(),
+		currentPassword: z.string().min(8).optional(),
+	})
+	.refine(
+		(schema) => !(schema.newPassword && !schema.name),
+		'Informe sua senha atual para poder alterá-la',
+	);
 
 type UpdateUserBodySchema = z.infer<typeof updateUserBodySchema>;
 
@@ -82,6 +93,7 @@ export class UserController {
 	constructor(
 		private prismaService: PrismaService,
 		private configService: ConfigService<Env, true>,
+		private nodemailerService: NodemailerService,
 	) { }
 
 	@Post()
@@ -128,7 +140,7 @@ export class UserController {
 
 		const passwordHash = await hash(password, rounds);
 
-		return this.prismaService.user.create({
+		const user = this.prismaService.user.create({
 			data: {
 				email,
 				name,
@@ -142,6 +154,31 @@ export class UserController {
 				id: true,
 			},
 		});
+
+		const passwordEmailTemplateFile = readFileSync(
+			resolve(
+				process.cwd(),
+				'src',
+				'templates',
+				'user',
+				'password',
+				'password.template.hbs',
+			),
+			'utf-8',
+		);
+
+		const passwordEmailTemplate = compile(passwordEmailTemplateFile);
+
+		const passwordEmail = passwordEmailTemplate({ password });
+
+		await this.nodemailerService.sendMail({
+			mailSender: 'Team Peoli <contato@teampeoli.com>',
+			mailReceiver: email,
+			subject: 'Bem vindo ao Team Peoli',
+			body: passwordEmail,
+		});
+
+		return user;
 	}
 
 	@Get()
@@ -330,7 +367,7 @@ export class UserController {
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone }: UpdateUserBodySchema,
+		{ email, name, phone, newPassword, currentPassword }: UpdateUserBodySchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -357,6 +394,8 @@ export class UserController {
 		const user = await this.prismaService.user.findUnique({
 			select: {
 				id: true,
+				lastPasswordChange: true,
+				password: true,
 			},
 			where: {
 				id,
@@ -380,6 +419,18 @@ export class UserController {
 			throw new ConflictException('E-mail já está em uso por outro usuário');
 		}
 
+		if (newPassword && user.lastPasswordChange) {
+			const passwordMatch = await compare(currentPassword!, user.password);
+
+			if (!passwordMatch) {
+				throw new BadRequestException('Senha atual incorreta');
+			}
+		}
+
+		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
+			infer: true,
+		});
+
 		const updatedUser = await this.prismaService.user.update({
 			select: {
 				id: true,
@@ -391,6 +442,8 @@ export class UserController {
 				email,
 				name,
 				phone,
+				password: newPassword ? await hash(newPassword, rounds) : undefined,
+				lastPasswordChange: newPassword ? new Date() : undefined,
 			},
 			where: {
 				id,

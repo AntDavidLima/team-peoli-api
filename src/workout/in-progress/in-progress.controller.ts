@@ -13,10 +13,12 @@ import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 
 const getWorkoutInProgressQuerySchema = z.object({
-	trainingId: z.coerce.number({
-		required_error:
-			'Não foi possível identificar o treino a que este exercício pertence',
-	}),
+	trainingIds: z.array(
+		z.coerce.number({
+			required_error:
+				'Não foi possível identificar o treino a que este exercício pertence',
+		}),
+	),
 });
 
 type GetWorkoutInProgressQuerySchema = z.infer<
@@ -31,7 +33,7 @@ export class InProgressController {
 	@Get()
 	async index(
 		@Query(new ZodValidationPipe(getWorkoutInProgressQuerySchema))
-		{ trainingId }: GetWorkoutInProgressQuerySchema,
+		{ trainingIds }: GetWorkoutInProgressQuerySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -51,9 +53,9 @@ export class InProgressController {
 			);
 		}
 
-		const training = await this.prismaService.training.findUnique({
+		const trainings = await this.prismaService.training.findMany({
 			where: {
-				id: trainingId,
+				id: { in: trainingIds },
 			},
 			select: {
 				routines: {
@@ -64,14 +66,14 @@ export class InProgressController {
 			},
 		});
 
-		if (!training) {
+		if (trainings.length !== trainingIds.length) {
 			throw new BadRequestException(
-				'Não foi possível identificar o treino a que este exercício pertence',
+				'Não foi possível identificar um ou mais treinos do qual você deseja visualizar o treino em andamento',
 			);
 		}
 
-		const trainingBelongsToCurrentUser = training.routines.some(
-			(routine) => routine.userId === currentUser.id,
+		const trainingBelongsToCurrentUser = trainings.every((training) =>
+			training.routines.every((routine) => routine.userId === currentUser.id),
 		);
 
 		if (!trainingBelongsToCurrentUser && !currentUser.isProfessor) {
@@ -82,13 +84,29 @@ export class InProgressController {
 
 		const workout = await this.prismaService.workout.findFirst({
 			where: {
-				trainingId,
+				trainings: {
+					every: {
+						id: { in: trainingIds },
+					},
+				},
 				studentId: currentUser.id,
 				endTime: null,
 			},
 			select: {
 				id: true,
 				startTime: true,
+				exercises: {
+					select: {
+						exerciseId: true,
+						WorkoutExerciseSets: {
+							select: {
+								id: true,
+								load: true,
+								reps: true,
+							},
+						},
+					},
+				},
 			},
 		});
 
