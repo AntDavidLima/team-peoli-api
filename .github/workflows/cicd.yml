@@ -8,6 +8,8 @@ env:
   DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
   APPLICATION_PORT: 3000
   CLIENT_URL: https://teampeoli.com
+  SMTP_USER: ses-smtp-user.20240830-210310
+  SMTP_HOST: email-smtp.sa-east-1.amazonaws.com
 
 jobs:
   build:
@@ -67,6 +69,9 @@ jobs:
             -e DATABASE_URL=${{ env.DATABASE_URL }} \
             -e APPLICATION_PORT=${{ env.APPLICATION_PORT }} \
             -e CLIENT_URL=${{ env.CLIENT_URL }} \
+            -e SMTP_HOST=${{ env.SMTP_HOST }} \
+            -e SMTP_USER=${{ env.SMTP_USER }} \
+            -e SMTP_PASS=${{ secrets.SMTP_PASS }} \
             --network=host \
             team-peoli-api:latest
       - name: Clean up
