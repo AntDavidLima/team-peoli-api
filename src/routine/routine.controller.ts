@@ -66,6 +66,7 @@ const listRoutinesQueryParamsSchema = z.object({
 			}),
 		})
 		.optional(),
+	listEmpty: z.coerce.boolean().optional(),
 });
 
 type ListRoutinesQueryParamsSchema = z.infer<
@@ -146,7 +147,7 @@ export class RoutineController {
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 		@Query(new ZodValidationPipe(listRoutinesQueryParamsSchema))
-		{ userId, day }: ListRoutinesQueryParamsSchema,
+		{ userId, day, listEmpty }: ListRoutinesQueryParamsSchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -216,9 +217,11 @@ export class RoutineController {
 					},
 					where: {
 						day,
-						name: {
-							not: null,
-						},
+						name: listEmpty
+							? undefined
+							: {
+								not: null,
+							},
 					},
 				},
 			},
