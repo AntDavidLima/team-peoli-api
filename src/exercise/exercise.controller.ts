@@ -57,7 +57,7 @@ const createExerciseBodySchema = z.object({
 type CreateExerciseBodySchema = z.infer<typeof createExerciseBodySchema>;
 
 const listExercisesQueryParamsSchema = z.object({
-	rows: z.coerce.number().default(10),
+	rows: z.coerce.number().default(100),
 	page: z.coerce.number().default(1),
 	query: z.string().default(''),
 });
