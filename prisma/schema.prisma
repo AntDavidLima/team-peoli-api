@@ -162,6 +162,8 @@ model WorkoutExerciseSets {
   id   Int @id @default(autoincrement())
   reps Int @db.SmallInt
   load Int @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
   workoutExerciseId Int             @map("workout_exercise_id")

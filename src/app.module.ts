@@ -12,6 +12,7 @@ import { WorkoutModule } from './workout/workout.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { NodemailerService } from './nodemailer/nodemailer.service';
+import { ExerciseModule } from './exercise/exercise.module';
 
 @Module({
 	imports: [
@@ -23,6 +24,7 @@ import { NodemailerService } from './nodemailer/nodemailer.service';
 		WorkoutModule,
 		UserModule,
 		PrismaModule,
+		ExerciseModule,
 	],
 	controllers: [
 		ExerciseController,
