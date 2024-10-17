@@ -19,7 +19,7 @@ model Routine {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId Int  @map("user_id")
 
   emphasis  MuscleGroup[]
@@ -70,8 +70,7 @@ model MuscleGroup {
 
   exercises ExercisedMuscleGroup[]
 
-  routine   Routine? @relation(fields: [routineId], references: [id])
-  routineId Int?     @map("routine_id")
+  emphasizedBy Routine[]
 
   @@map("muscle_group")
 }
@@ -81,10 +80,10 @@ model ExercisedMuscleGroup {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   exerciseId Int      @map("exercise_id")
 
-  muscleGroup   MuscleGroup @relation(fields: [muscleGroupId], references: [id])
+  muscleGroup   MuscleGroup @relation(fields: [muscleGroupId], references: [id], onDelete: Cascade)
   muscleGroupId Int         @map("muscle_group_id")
 
   @@id([exerciseId, muscleGroupId])
@@ -113,10 +112,10 @@ model TrainingExercise {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   exerciseId Int      @map("exercise_id")
 
-  training   Training @relation(fields: [trainingId], references: [id])
+  training   Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
   trainingId Int      @map("training_id")
 
   @@id([exerciseId, trainingId])
@@ -136,7 +135,7 @@ model Workout {
 
   exercises WorkoutExercise[]
 
-  student   User @relation(fields: [studentId], references: [id])
+  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId Int  @map("student_id")
 
   @@map("workout")
@@ -147,10 +146,10 @@ model WorkoutExercise {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   exerciseId Int      @map("exercise_id")
 
-  workout   Workout? @relation(fields: [workoutId], references: [id])
+  workout   Workout? @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   workoutId Int      @map("workout_id")
 
   WorkoutExerciseSets WorkoutExerciseSets[]
@@ -164,7 +163,7 @@ model WorkoutExerciseSets {
   reps Int @db.SmallInt
   load Int @db.SmallInt
 
-  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id])
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
   workoutExerciseId Int             @map("workout_exercise_id")
 
   @@map("workout_exercise_sets")
