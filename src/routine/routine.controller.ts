@@ -228,6 +228,9 @@ export class RoutineController {
                   some: {},
                 },
           },
+          orderBy: {
+            day: 'asc',
+          },
         },
       },
     });
