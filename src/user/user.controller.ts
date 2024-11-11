@@ -214,16 +214,19 @@ export class UserController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
 							email: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
 							phone: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 					],
@@ -242,16 +245,19 @@ export class UserController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
 							email: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
 							phone: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 					],

@@ -18,7 +18,7 @@ const getWorkoutInProgressQuerySchema = z.object({
 			required_error:
 				'Não foi possível identificar o treino a que este exercício pertence',
 		}),
-	),
+	).or(z.coerce.number()),
 });
 
 type GetWorkoutInProgressQuerySchema = z.infer<
@@ -51,6 +51,10 @@ export class InProgressController {
 			throw new BadRequestException(
 				'Não foi possível identificar o usuário logado',
 			);
+		}
+
+		if (typeof trainingIds === 'number') {
+			trainingIds = [trainingIds]
 		}
 
 		const trainings = await this.prismaService.training.findMany({

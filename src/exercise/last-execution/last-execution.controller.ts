@@ -2,7 +2,7 @@ import {
 	BadRequestException,
 	Controller,
 	Get,
-	Param,
+	Param, Query,
 	UseGuards,
 } from '@nestjs/common';
 import { AuthenticationGuard } from 'src/authentication/authentication.guard';
@@ -11,12 +11,26 @@ import { AuthenticationTokenPayload } from 'src/authentication/token-payload/tok
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { Days } from '../../routine/routine.controller';
 
 const getExerciseParamsSchema = z.object({
 	id: z.coerce.number(),
 });
 
 type GetExerciseParamsSchema = z.infer<typeof getExerciseParamsSchema>;
+
+const getExerciseQueryParamsSchema = z.object({
+	day: z.enum(Days, {
+		errorMap: (issue) => ({
+			message:
+				issue.code === 'invalid_enum_value'
+					? 'Treino possui um dia inválido'
+					: issue.message!,
+		}),
+	}),
+});
+
+type GetExerciseQueryParamsSchema = z.infer<typeof getExerciseQueryParamsSchema>;
 
 @Controller('exercise/:id/last-execution')
 @UseGuards(AuthenticationGuard)
@@ -29,6 +43,8 @@ export class LastExecutionController {
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 		@Param(new ZodValidationPipe(getExerciseParamsSchema))
 		{ id }: GetExerciseParamsSchema,
+		@Query(new ZodValidationPipe(getExerciseQueryParamsSchema))
+			{ day }: GetExerciseQueryParamsSchema,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -51,6 +67,11 @@ export class LastExecutionController {
 				exerciseId: id,
 				workout: {
 					studentId: currentUser.id,
+					trainings: {
+						every: {
+							day,
+						}
+					}
 				},
 			},
 			orderBy: {

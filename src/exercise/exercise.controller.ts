@@ -11,8 +11,8 @@ import {
 	Param,
 	Patch,
 	Post,
-	Query,
-	UseGuards,
+	Query, UploadedFile,
+	UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { AuthenticationGuard } from 'src/authentication/authentication.guard';
 import { AuthenticationTokenPayloadSchema } from 'src/authentication/authentication.strategy';
@@ -20,6 +20,12 @@ import { AuthenticationTokenPayload } from 'src/authentication/token-payload/tok
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { File, FileInterceptor } from '@nest-lab/fastify-multer';
+import { ConfigService } from '@nestjs/config';
+import { Env } from '../env';
+import slugify from 'slugify';
+import * as path from 'node:path';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const literalSchema = z.union([z.string(), z.number(), z.boolean()]);
 type Literal = z.infer<typeof literalSchema>;
@@ -48,10 +54,6 @@ const createExerciseBodySchema = z.object({
 		.min(1, {
 			message: 'Cada exercício deve possuir pelo menos um grupo muscular',
 		}),
-	executionVideoUrl: z
-		.string()
-		.url('Url do vídeo de execução inválida')
-		.optional(),
 });
 
 type CreateExerciseBodySchema = z.infer<typeof createExerciseBodySchema>;
@@ -109,9 +111,10 @@ type UpdateExerciseBodySchema = z.infer<typeof updateExerciseBodySchema>;
 @Controller('exercise')
 @UseGuards(AuthenticationGuard)
 export class ExerciseController {
-	constructor(private prismaService: PrismaService) { }
+	constructor(private prismaService: PrismaService, private configService: ConfigService<Env, true>) { }
 
 	@Post()
+	@UseInterceptors(FileInterceptor('executionVideo'))
 	async store(
 		@Body(new ZodValidationPipe(createExerciseBodySchema))
 		{
@@ -119,10 +122,10 @@ export class ExerciseController {
 			instructions,
 			restTime,
 			muscleGroups,
-			executionVideoUrl,
 		}: CreateExerciseBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+		@UploadedFile() executionVideo: File
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -159,12 +162,34 @@ export class ExerciseController {
 			);
 		}
 
+		let executionVideoUrl: string | undefined = undefined;
+
+		if (executionVideo) {
+			const s3Client = new S3Client({
+				region: this.configService.get('BUCKET_REGION', { infer: true }),
+				credentials: {
+					accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', { infer: true }),
+					secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', { infer: true }),
+				}
+			})
+
+			await s3Client.send(
+				new PutObjectCommand({
+					Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+					Key: slugify(name, { lower: true }) + path.extname(executionVideo.originalname),
+					Body: executionVideo.buffer,
+				})
+			)
+
+			executionVideoUrl = `https://${this.configService.get('BUCKET_NAME')}.s3.amazonaws.com/${slugify(name, { lower: true })}${path.extname(executionVideo.originalname)}`
+		}
+
 		return await this.prismaService.exercise.create({
 			data: {
 				name,
-				executionVideoUrl,
 				instructions,
 				restTime,
+				executionVideoUrl,
 				muscleGroups: {
 					createMany: {
 						data: muscleGroups.map((muscleGroup) => ({
@@ -218,6 +243,7 @@ export class ExerciseController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
@@ -226,6 +252,7 @@ export class ExerciseController {
 									muscleGroup: {
 										name: {
 											contains: query,
+											mode: 'insensitive',
 										},
 									},
 								},
@@ -240,6 +267,7 @@ export class ExerciseController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
@@ -248,6 +276,7 @@ export class ExerciseController {
 									muscleGroup: {
 										name: {
 											contains: query,
+											mode: 'insensitive',
 										},
 									},
 								},
