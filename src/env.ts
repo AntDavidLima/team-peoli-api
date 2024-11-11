@@ -9,6 +9,10 @@ export const envSchema = z.object({
 	SMTP_HOST: z.string(),
 	SMTP_USER: z.string(),
 	SMTP_PASS: z.string(),
+	BUCKET_NAME: z.string(),
+	BUCKET_ACCESS_KEY: z.string(),
+	BUCKET_SECRET_ACCESS_KEY: z.string(),
+	BUCKET_REGION: z.string()
 });
 
 export type Env = z.infer<typeof envSchema>;
