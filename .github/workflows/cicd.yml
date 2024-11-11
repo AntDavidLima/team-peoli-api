@@ -71,6 +71,10 @@ jobs:
             -e SMTP_HOST=${{ env.SMTP_HOST }} \
             -e SMTP_USER=${{ secrets.SMTP_USER }} \
             -e SMTP_PASS=${{ secrets.SMTP_PASS }} \
+            -e BUCKET_NAME=${{ secrets.BUCKET_NAME }} \
+            -e BUCKET_ACCESS_KEY=${{ secrets.BUCKET_ACCESS_KEY }} \
+            -e BUCKET_SECRET_ACCESS_KEY=${{ secrets.BUCKET_SECRET_ACCESS_KEY }} \
+            -e BUCKET_REGION=${{ secrets.BUCKET_REGION }} \
             --network=host \
             team-peoli-api:latest
       - name: Clean up
