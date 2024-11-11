@@ -218,6 +218,7 @@ export class ExerciseController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
@@ -226,6 +227,7 @@ export class ExerciseController {
 									muscleGroup: {
 										name: {
 											contains: query,
+											mode: 'insensitive',
 										},
 									},
 								},
@@ -240,6 +242,7 @@ export class ExerciseController {
 						{
 							name: {
 								contains: query,
+								mode: 'insensitive',
 							},
 						},
 						{
@@ -248,6 +251,7 @@ export class ExerciseController {
 									muscleGroup: {
 										name: {
 											contains: query,
+											mode: 'insensitive',
 										},
 									},
 								},
