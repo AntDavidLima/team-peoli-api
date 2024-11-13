@@ -25,7 +25,7 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '../env';
 import slugify from 'slugify';
 import * as path from 'node:path';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { CopyObjectCommand, DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const literalSchema = z.union([z.string(), z.number(), z.boolean()]);
 type Literal = z.infer<typeof literalSchema>;
@@ -36,9 +36,7 @@ const jsonSchema: z.ZodType<Json> = z.lazy(() =>
 
 const createExerciseBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	instructions: z.lazy(() =>
-		z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)]),
-	),
+	instructions: z.string(),
 	restTime: z.coerce.number().optional(),
 	muscleGroups: z
 		.object({
@@ -82,9 +80,7 @@ type UpdateExerciseParamsSchema = z.infer<typeof updateExerciseParamsSchema>;
 
 const updateExerciseBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
-	instructions: z.lazy(() =>
-		z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)]),
-	),
+	instructions: z.string(),
 	restTime: z.coerce.number().optional(),
 	muscleGroups: z
 		.object({
@@ -100,10 +96,6 @@ const updateExerciseBodySchema = z.object({
 		.min(1, {
 			message: 'Cada exercício deve possuir pelo menos um grupo muscular',
 		}),
-	executionVideoUrl: z
-		.string()
-		.url('Url do vídeo de execução inválida')
-		.optional(),
 });
 
 type UpdateExerciseBodySchema = z.infer<typeof updateExerciseBodySchema>;
@@ -187,7 +179,7 @@ export class ExerciseController {
 		return await this.prismaService.exercise.create({
 			data: {
 				name,
-				instructions,
+				instructions: JSON.parse(instructions),
 				restTime,
 				executionVideoUrl,
 				muscleGroups: {
@@ -341,6 +333,8 @@ export class ExerciseController {
 			select: {
 				id: true,
 				trainings: true,
+				executionVideoUrl: true,
+				name: true,
 			},
 			where: {
 				id,
@@ -355,6 +349,23 @@ export class ExerciseController {
 			throw new ConflictException(
 				'Exercício não pode ser excluído por fazer parte de um ou mais treinos',
 			);
+		}
+
+		if (exercise.executionVideoUrl) {
+			const s3Client = new S3Client({
+				region: this.configService.get('BUCKET_REGION', { infer: true }),
+				credentials: {
+					accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', { infer: true }),
+					secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', { infer: true }),
+				}
+			})
+
+			await s3Client.send(
+				new DeleteObjectCommand({
+					Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+					Key: slugify(exercise.name, { lower: true }) + exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0],
+				})
+			)
 		}
 
 		const deleteExercisedMuscleGroupsPromise =
@@ -377,6 +388,7 @@ export class ExerciseController {
 	}
 
 	@Patch(':id')
+	@UseInterceptors(FileInterceptor('executionVideo'))
 	async update(
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
@@ -388,8 +400,9 @@ export class ExerciseController {
 			restTime,
 			instructions,
 			muscleGroups,
-			executionVideoUrl,
 		}: UpdateExerciseBodySchema,
+		@UploadedFile()
+		executionVideo: File,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -416,6 +429,8 @@ export class ExerciseController {
 		const exercise = await this.prismaService.exercise.findUnique({
 			select: {
 				id: true,
+				name: true,
+				executionVideoUrl: true,
 			},
 			where: {
 				id,
@@ -426,10 +441,68 @@ export class ExerciseController {
 			throw new BadRequestException('Exercício não encontrado');
 		}
 
+		let executionVideoUrl;
+
+		if (executionVideo) {
+			const s3Client = new S3Client({
+				region: this.configService.get('BUCKET_REGION', { infer: true }),
+				credentials: {
+					accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', { infer: true }),
+					secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', { infer: true }),
+				}
+			})
+
+			await s3Client.send(
+				new PutObjectCommand({
+					Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+					Key: slugify(name, { lower: true }) + path.extname(executionVideo.originalname),
+					Body: executionVideo.buffer,
+				})
+			)
+
+			if (exercise.name !== name && exercise.executionVideoUrl) {
+				await s3Client.send(
+					new DeleteObjectCommand({
+						Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+						Key: slugify(exercise.name, { lower: true }) + exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0],
+					})
+				)
+			}
+
+			executionVideoUrl = `https://${this.configService.get('BUCKET_NAME')}.s3.amazonaws.com/${slugify(name, { lower: true })}${path.extname(executionVideo.originalname)}`
+		}
+
+		if (exercise.name !== name && exercise.executionVideoUrl && !executionVideo) {
+			const s3Client = new S3Client({
+				region: this.configService.get('BUCKET_REGION', { infer: true }),
+				credentials: {
+					accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', { infer: true }),
+					secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', { infer: true }),
+				}
+			})
+
+			await s3Client.send(
+				new CopyObjectCommand({
+					Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+					CopySource: `${this.configService.get('BUCKET_NAME', { infer: true })}/${slugify(exercise.name, { lower: true }) + exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0]}`,
+					Key: slugify(name, { lower: true }) + exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0],
+				})
+			)
+
+			await s3Client.send(
+				new DeleteObjectCommand({
+					Bucket: this.configService.get('BUCKET_NAME', { infer: true }),
+					Key: slugify(exercise.name, { lower: true }) + exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0],
+				})
+			)
+
+			executionVideoUrl = `https://${this.configService.get('BUCKET_NAME')}.s3.amazonaws.com/${slugify(name, { lower: true })}${exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0]}}`
+		}
+
 		const updatedExercise = await this.prismaService.exercise.update({
 			data: {
 				name,
-				instructions,
+				instructions: JSON.parse(instructions),
 				executionVideoUrl,
 				restTime,
 				muscleGroups: {
