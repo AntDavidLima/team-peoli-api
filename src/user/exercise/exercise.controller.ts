@@ -77,46 +77,30 @@ export class ExerciseController {
 
     return this.prismaService.exercise.findMany({
       where: {
-        trainings: {
-          every: {
-            training: {
-              routines: {
-                every: {
-                  userId: id,
-                },
-              },
-            },
-          },
-        },
         workouts: {
           some: {
-            WorkoutExerciseSets: {
-              some: {
-                AND: {
-                  reps: {
-                    not: undefined,
-                  },
-                  load: {
-                    not: undefined,
-                  },
-                },
-              },
-            },
-          },
-          every: {
             workout: {
+              studentId: id,
               startTime: {
                 gte: startDate,
                 lte: endDate,
-              },
-            },
-          },
-        },
+              }
+            }
+          }
+        }
       },
       select: {
         id: true,
         name: true,
         workouts: {
+          where: {
+            workout: {
+              startTime: {
+                gte: startDate,
+                lte: endDate,
+              }
+            }
+          },
           select: {
             WorkoutExerciseSets: {
               select: {
