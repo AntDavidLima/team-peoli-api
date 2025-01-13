@@ -98,7 +98,8 @@ export class ExerciseController {
               startTime: {
                 gte: startDate,
                 lte: endDate,
-              }
+              },
+              studentId: id,
             }
           },
           select: {
