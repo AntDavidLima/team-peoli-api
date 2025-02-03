@@ -210,6 +210,7 @@ export class RoutineController {
                     id: true,
                     name: true,
                     executionVideoUrl: true,
+                    thumbnailUrl: true,
                   },
                 },
               },
