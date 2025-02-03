@@ -12,7 +12,7 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -130,7 +130,7 @@ export class ExerciseController {
     { name, instructions, restTime, muscleGroups }: CreateExerciseBodySchema,
     @AuthenticationTokenPayload()
     authenticationTokenPayload: AuthenticationTokenPayloadSchema,
-    @UploadedFile()
+    @UploadedFiles()
     { executionVideo, videoThumbnail }: { executionVideo?: File[]; videoThumbnail?: File[] },
   ) {
     const currentUser = await this.prismaService.user.findUnique({
@@ -479,7 +479,7 @@ export class ExerciseController {
     { id }: UpdateExerciseParamsSchema,
     @Body(new ZodValidationPipe(updateExerciseBodySchema))
     { name, restTime, instructions, muscleGroups }: UpdateExerciseBodySchema,
-    @UploadedFile()
+    @UploadedFiles()
     { executionVideo, videoThumbnail }: { executionVideo?: File[]; videoThumbnail?: File[] },
   ) {
     const currentUser = await this.prismaService.user.findUnique({
