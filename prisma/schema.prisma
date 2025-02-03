@@ -50,6 +50,7 @@ model Exercise {
   id                Int      @id @default(autoincrement())
   name              String
   executionVideoUrl String?  @map("execution_video_url")
+  thumbnailUrl      String?  @map("thumbnail_url")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
   instructions      Json?
@@ -159,9 +160,9 @@ model WorkoutExercise {
 }
 
 model WorkoutExerciseSets {
-  id   Int @id @default(autoincrement())
-  reps Int @db.SmallInt
-  load Int @db.SmallInt
+  id        Int      @id @default(autoincrement())
+  reps      Int      @db.SmallInt
+  load      Int      @db.SmallInt
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
