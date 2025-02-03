@@ -330,6 +330,7 @@ export class ExerciseController {
           instructions: true,
           restTime: true,
           executionVideoUrl: true,
+          thumbnailUrl: true,
           muscleGroups: {
             select: {
               weight: true,
