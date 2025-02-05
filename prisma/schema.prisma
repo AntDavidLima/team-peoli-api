@@ -162,7 +162,7 @@ model WorkoutExercise {
 model WorkoutExerciseSets {
   id        Int      @id @default(autoincrement())
   reps      Int      @db.SmallInt
-  load      Int      @db.SmallInt
+  load      Decimal  @db.Decimal(5, 2)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
