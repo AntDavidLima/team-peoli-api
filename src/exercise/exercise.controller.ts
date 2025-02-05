@@ -22,10 +22,7 @@ import { AuthenticationTokenPayload } from 'src/authentication/token-payload/tok
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
-import {
-  File,
-  FileFieldsInterceptor,
-} from '@nest-lab/fastify-multer';
+import { File, FileFieldsInterceptor } from '@nest-lab/fastify-multer';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../env';
 import slugify from 'slugify';
@@ -131,7 +128,10 @@ export class ExerciseController {
     @AuthenticationTokenPayload()
     authenticationTokenPayload: AuthenticationTokenPayloadSchema,
     @UploadedFiles()
-    { executionVideo, videoThumbnail }: { executionVideo?: File[]; videoThumbnail?: File[] },
+    {
+      executionVideo,
+      videoThumbnail,
+    }: { executionVideo?: File[]; videoThumbnail?: File[] },
   ) {
     const currentUser = await this.prismaService.user.findUnique({
       where: {
@@ -169,7 +169,7 @@ export class ExerciseController {
     }
 
     let executionVideoUrl: string | undefined = undefined;
-		let thumbnailUrl: string | undefined = undefined;
+    let thumbnailUrl: string | undefined = undefined;
 
     if (executionVideo && executionVideo[0]) {
       const s3Client = new S3Client({
@@ -229,7 +229,7 @@ export class ExerciseController {
         instructions: JSON.parse(instructions),
         restTime,
         executionVideoUrl,
-				thumbnailUrl,
+        thumbnailUrl,
         muscleGroups: {
           createMany: {
             data: muscleGroups.map((muscleGroup) => ({
@@ -401,7 +401,10 @@ export class ExerciseController {
       );
     }
 
-    if (exercise.executionVideoUrl) {
+    if (
+      exercise.executionVideoUrl &&
+      exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)?.[0]
+    ) {
       const s3Client = new S3Client({
         region: this.configService.get('BUCKET_REGION', { infer: true }),
         credentials: {
@@ -481,7 +484,10 @@ export class ExerciseController {
     @Body(new ZodValidationPipe(updateExerciseBodySchema))
     { name, restTime, instructions, muscleGroups }: UpdateExerciseBodySchema,
     @UploadedFiles()
-    { executionVideo, videoThumbnail }: { executionVideo?: File[]; videoThumbnail?: File[] },
+    {
+      executionVideo,
+      videoThumbnail,
+    }: { executionVideo?: File[]; videoThumbnail?: File[] },
   ) {
     const currentUser = await this.prismaService.user.findUnique({
       where: {
@@ -547,10 +553,16 @@ export class ExerciseController {
         }),
       );
 
-      if (exercise.name !== name && exercise.executionVideoUrl) {
+      if (
+        exercise.name !== name &&
+        exercise.executionVideoUrl &&
+        exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)?.[0]
+      ) {
         await s3Client.send(
           new DeleteObjectCommand({
-            Bucket: this.configService.get('VIDEOS_BUCKET_NAME', { infer: true }),
+            Bucket: this.configService.get('VIDEOS_BUCKET_NAME', {
+              infer: true,
+            }),
             Key:
               slugify(exercise.name, { lower: true }) +
               exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)![0],
@@ -587,7 +599,9 @@ export class ExerciseController {
       if (exercise.name !== name && exercise.thumbnailUrl) {
         await s3Client.send(
           new DeleteObjectCommand({
-            Bucket: this.configService.get('THUMBS_BUCKET_NAME', { infer: true }),
+            Bucket: this.configService.get('THUMBS_BUCKET_NAME', {
+              infer: true,
+            }),
             Key:
               slugify(exercise.name, { lower: true }) +
               exercise.thumbnailUrl.match(/\.[0-9a-z]+$/i)![0],
@@ -601,6 +615,7 @@ export class ExerciseController {
     if (
       exercise.name !== name &&
       exercise.executionVideoUrl &&
+      exercise.executionVideoUrl.match(/\.[0-9a-z]+$/i)?.[0] &&
       (!executionVideo || !executionVideo[0])
     ) {
       const s3Client = new S3Client({
