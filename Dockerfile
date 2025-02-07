@@ -21,9 +21,9 @@ COPY --from=builder /tmp/team-peoli-api/dist dist
 COPY --from=builder /tmp/team-peoli-api/prisma prisma
 COPY --from=builder /tmp/team-peoli-api/package*.json .
 
-RUN mkdir dist/user/password
+RUN mkdir dist/user/welcome-mail/password
 
-COPY --from=builder /tmp/team-peoli-api/src/user/password/password.template.hbs dist/user/password
+COPY --from=builder /tmp/team-peoli-api/src/user/welcome-mail/password/password.template.hbs dist/user/welcome-mail/password
 
 RUN npm install --only-prod
 
