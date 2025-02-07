@@ -150,26 +150,6 @@ export class UserController {
 			},
 		});
 
-		// const passwordEmailTemplateFile = readFileSync(
-		// 	resolve(
-		// 		__dirname,
-		// 		'password',
-		// 		'password.template.hbs',
-		// 	),
-		// 	'utf-8',
-		// );
-
-		// const passwordEmailTemplate = compile(passwordEmailTemplateFile);
-
-		// const passwordEmail = passwordEmailTemplate({ password });
-
-		// await this.nodemailerService.sendMail({
-		// 	mailSender: 'Team Peoli <contato@teampeoli.com>',
-		// 	mailReceiver: email,
-		// 	subject: 'Bem vindo ao Team Peoli',
-		// 	body: passwordEmail,
-		// });
-
 		return user;
 	}
 

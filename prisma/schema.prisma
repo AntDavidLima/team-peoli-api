@@ -39,6 +39,7 @@ model User {
   updatedAt          DateTime  @updatedAt @map("updated_at")
   isProfessor        Boolean   @default(false) @map("is_professor")
   lastPasswordChange DateTime? @map("last_password_change")
+  lastLogin          DateTime? @map("last_login")
 
   workouts Workout[]
   Routine  Routine[]
