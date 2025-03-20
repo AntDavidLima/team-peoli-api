@@ -118,6 +118,7 @@ const updateRoutineBodySchema = z.object({
             reps: z.string(),
             restTime: z.coerce.number(),
             exerciseId: z.coerce.number(),
+            order: z.coerce.number(),
             orientations: z.lazy(() =>
               z.union([
                 literalSchema,
@@ -213,6 +214,9 @@ export class RoutineController {
                     thumbnailUrl: true,
                   },
                 },
+              },
+              orderBy: {
+                order: 'asc',
               },
             },
           },
@@ -393,6 +397,7 @@ export class RoutineController {
                   restTime: exercise.restTime,
                   exerciseId: exercise.exerciseId,
                   orientations: exercise.orientations,
+                  order: exercise.order,
                 })),
               },
             },
