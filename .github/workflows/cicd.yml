@@ -7,7 +7,7 @@ on:
 env:
   DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
   APPLICATION_PORT: 3000
-  CLIENT_URL: teampeoli\.com$
+  CLIENT_URL: https://teampeoli.com,https://aluno.teampeoli.com
   SMTP_HOST: smtp.zoho.com
 
 jobs:
