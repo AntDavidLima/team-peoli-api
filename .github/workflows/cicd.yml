@@ -7,7 +7,7 @@ on:
 env:
   DATABASE_URL: postgresql://${{ secrets.POSTGRESQL_USERNAME }}:${{ secrets.POSTGRESQL_PASSWORD }}@localhost:5432/${{ secrets.POSTGRESQL_DATABASE }}?schema=public
   APPLICATION_PORT: 3000
-  CLIENT_URL: https://teampeoli.com
+  CLIENT_URL: teampeoli\.com$
   SMTP_HOST: smtp.zoho.com
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           port: ${{ secrets.EC2_PORT }}
           key: ${{ secrets.EC2_KEY }}
-          source: "api-image.tar"
+          source: 'api-image.tar'
           target: /home/admin/api
       - name: Load image
         uses: appleboy/ssh-action@v1.0.3
