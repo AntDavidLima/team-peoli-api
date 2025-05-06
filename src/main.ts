@@ -27,7 +27,7 @@ async function bootstrap() {
   const configService = app.get<ConfigService<Env, true>>(ConfigService);
 
   app.enableCors({
-    origin: new RegExp(configService.get('CLIENT_URL')),
+    origin: configService.get('CLIENT_URL').split(','),
   });
 
   await app.listen(configService.get('APPLICATION_PORT'), '0.0.0.0');
