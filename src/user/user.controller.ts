@@ -21,6 +21,7 @@ import { AuthenticationTokenPayloadSchema } from 'src/authentication/authenticat
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
 import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 
@@ -153,6 +154,28 @@ export class UserController {
 		return user;
 	}
 
+	@Get('prof')
+	async getProf() {
+		const prof = await this.prismaService.user.findFirst({
+			where: {
+				isProfessor: true,
+			},
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				phone: true,
+			},
+		});
+
+		if (!prof) {
+			throw new BadRequestException('Nenhum professor encontrado');
+		}
+
+		return prof;
+	}
+
+
 	@Get()
 	async index(
 		@AuthenticationTokenPayload()
@@ -181,31 +204,19 @@ export class UserController {
 			);
 		}
 
-		return this.prismaService.$transaction([
+		const whereConditions: Prisma.UserWhereInput = {};
+		whereConditions.isProfessor = false;
+
+		if (query) {
+			whereConditions.OR = [
+				{ name: { contains: query, mode: 'insensitive' } },
+				{ email: { contains: query, mode: 'insensitive' } },
+				{ phone: { contains: query, mode: 'insensitive' } },
+			];
+    	}
+		return await this.prismaService.$transaction([
 			this.prismaService.user.count({
-				where: {
-					isProfessor: false,
-					OR: [
-						{
-							name: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							email: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							phone: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-					],
-				},
+				where: whereConditions,
 			}),
 			this.prismaService.user.findMany({
 				select: {
@@ -214,29 +225,7 @@ export class UserController {
 					email: true,
 					phone: true,
 				},
-				where: {
-					isProfessor: false,
-					OR: [
-						{
-							name: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							email: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							phone: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-					],
-				},
+				where: whereConditions,
 				skip: (page - 1) * rows,
 				take: rows,
 			}),
