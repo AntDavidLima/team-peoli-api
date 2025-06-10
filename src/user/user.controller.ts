@@ -13,6 +13,8 @@ import {
 	Post,
 	Query,
 	UseGuards,
+	UseInterceptors,
+	UploadedFile
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcryptjs';
@@ -24,6 +26,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { File, FileInterceptor } from '@nest-lab/fastify-multer';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const createUserBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
@@ -76,6 +80,7 @@ const updateUserBodySchema = z
 			.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
 		newPassword: z.string().min(8).optional(),
 		currentPassword: z.string().min(8).optional(),
+		profilePhotoUrl: z.string().optional(),
 	})
 	.refine(
 		(schema) => !(schema.newPassword && !schema.name),
@@ -267,6 +272,7 @@ export class UserController {
 				name: true,
 				email: true,
 				phone: true,
+				profilePhotoUrl: true,
 			},
 			where: {
 				id,
@@ -328,13 +334,15 @@ export class UserController {
 	}
 
 	@Patch(':id')
+	@UseInterceptors(FileInterceptor('profilePhoto'))
 	async update(
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone, newPassword, currentPassword }: UpdateUserBodySchema,
+		{ email, name, phone, newPassword, profilePhotoUrl, currentPassword }: UpdateUserBodySchema,
+		@UploadedFile() profilePhotoFile?: File,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -363,6 +371,7 @@ export class UserController {
 				id: true,
 				lastPasswordChange: true,
 				password: true,
+				profilePhotoUrl: true,
 			},
 			where: {
 				id,
@@ -394,6 +403,41 @@ export class UserController {
 			}
 		}
 
+		if (profilePhotoFile) {
+
+			const s3Client = new S3Client({
+				region: this.configService.get('BUCKET_REGION', { infer: true }),
+				credentials: {
+				accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', {
+					infer: true,
+				}),
+				secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', {
+					infer: true,
+				}),
+				},
+			});
+			
+			if(user.profilePhotoUrl){
+				const oldKey = new URL(user.profilePhotoUrl).pathname.substring(1);
+				await s3Client.send(
+					new DeleteObjectCommand({
+						Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME'),
+						Key: oldKey
+					})
+				)
+			}
+
+			await s3Client.send(
+				new PutObjectCommand({
+				Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME', { infer: true }),
+				Key: profilePhotoFile.originalname,
+				Body: profilePhotoFile.buffer,
+				}),
+			);
+
+			profilePhotoUrl = `https://${this.configService.get('PROFILE_PHOTOS_BUCKET_NAME')}.s3.amazonaws.com/${profilePhotoFile.originalname}`;
+			
+		}
 		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
 			infer: true,
 		});
@@ -411,6 +455,7 @@ export class UserController {
 				phone,
 				password: newPassword ? await hash(newPassword, rounds) : undefined,
 				lastPasswordChange: newPassword ? new Date() : undefined,
+				profilePhotoUrl: profilePhotoUrl ?? undefined,
 			},
 			where: {
 				id,
