@@ -159,28 +159,6 @@ export class UserController {
 		return user;
 	}
 
-	@Get('prof')
-	async getProf() {
-		const prof = await this.prismaService.user.findFirst({
-			where: {
-				isProfessor: true,
-			},
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				phone: true,
-			},
-		});
-
-		if (!prof) {
-			throw new BadRequestException('Nenhum professor encontrado');
-		}
-
-		return prof;
-	}
-
-
 	@Get()
 	async index(
 		@AuthenticationTokenPayload()
