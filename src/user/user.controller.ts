@@ -28,6 +28,8 @@ import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
 import { File, FileInterceptor } from '@nest-lab/fastify-multer';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path'
 
 const createUserBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
@@ -380,64 +382,78 @@ export class UserController {
 				throw new BadRequestException('Senha atual incorreta');
 			}
 		}
-
 		if (profilePhotoFile) {
+		const s3Client = new S3Client({
+			region: this.configService.get('BUCKET_REGION', { infer: true }),
+			credentials: {
+			accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', {
+				infer: true,
+			}),
+			secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', {
+				infer: true,
+			}),
+			},
+		});
 
-			const s3Client = new S3Client({
-				region: this.configService.get('BUCKET_REGION', { infer: true }),
-				credentials: {
-				accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', {
-					infer: true,
-				}),
-				secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', {
-					infer: true,
-				}),
-				},
-			});
+		if (user.profilePhotoUrl) {
+			try {
+			const oldKey = new URL(user.profilePhotoUrl).pathname.substring(1);
 			
-			if(user.profilePhotoUrl){
-				const oldKey = new URL(user.profilePhotoUrl).pathname.substring(1);
+			if(oldKey && oldKey.includes('/')) {
 				await s3Client.send(
-					new DeleteObjectCommand({
-						Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME'),
-						Key: oldKey
-					})
-				)
-			}
-
-			await s3Client.send(
-				new PutObjectCommand({
-				Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME', { infer: true }),
-				Key: profilePhotoFile.originalname,
-				Body: profilePhotoFile.buffer,
+				new DeleteObjectCommand({
+					Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME'),
+					Key: oldKey,
 				}),
-			);
-
-			profilePhotoUrl = `https://${this.configService.get('PROFILE_PHOTOS_BUCKET_NAME')}.s3.amazonaws.com/${profilePhotoFile.originalname}`;
-			
+				);
+			}
+			} catch (error) {
+				console.error("Falha ao deletar a foto de perfil antiga:", error);
+			}
 		}
+
+		const fileExtension = extname(profilePhotoFile.originalname);
+		const newKey = `${user.id}/${randomUUID()}${fileExtension}`;
+
+		await s3Client.send(
+			new PutObjectCommand({
+			Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME', {
+				infer: true,
+			}),
+			Key: newKey,
+			Body: profilePhotoFile.buffer,
+			ContentType: profilePhotoFile.mimetype, 
+			}),
+		);
+
+		const bucketName = this.configService.get('PROFILE_PHOTOS_BUCKET_NAME');
+		const region = this.configService.get('BUCKET_REGION');
+		profilePhotoUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${newKey}`;
+		}
+
 		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
-			infer: true,
+		infer: true,
 		});
 
 		const updatedUser = await this.prismaService.user.update({
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				phone: true,
-			},
-			data: {
-				email,
-				name,
-				phone,
-				password: newPassword ? await hash(newPassword, rounds) : undefined,
-				lastPasswordChange: newPassword ? new Date() : undefined,
-				profilePhotoUrl: profilePhotoUrl ?? undefined,
-			},
-			where: {
-				id,
-			},
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			phone: true,
+			profilePhotoUrl: true, 
+		},
+		data: {
+			email,
+			name,
+			phone,
+			password: newPassword ? await hash(newPassword, rounds) : undefined,
+			lastPasswordChange: newPassword ? new Date() : undefined,
+			profilePhotoUrl: profilePhotoUrl,
+		},
+		where: {
+			id,
+		},
 		});
 
 		return updatedUser;
