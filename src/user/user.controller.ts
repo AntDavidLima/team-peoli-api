@@ -14,7 +14,8 @@ import {
 	Query,
 	UseGuards,
 	UseInterceptors,
-	UploadedFile
+	UploadedFile,
+	InternalServerErrorException
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcryptjs';
@@ -408,7 +409,7 @@ export class UserController {
 				);
 			}
 			} catch (error) {
-				console.error("Falha ao deletar a foto de perfil antiga:", error);
+				throw new InternalServerErrorException("Não foi possível deletar a foto de perfil antiga");
 			}
 		}
 
