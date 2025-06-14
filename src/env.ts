@@ -13,7 +13,8 @@ export const envSchema = z.object({
 	THUMBS_BUCKET_NAME: z.string(),
 	BUCKET_ACCESS_KEY: z.string(),
 	BUCKET_SECRET_ACCESS_KEY: z.string(),
-	BUCKET_REGION: z.string()
+	BUCKET_REGION: z.string(),
+	PROFILE_PHOTOS_BUCKET_NAME: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

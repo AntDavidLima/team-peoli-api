@@ -29,6 +29,7 @@ export class MeController {
 				lastPasswordChange: true,
 				email: true,
 				phone: true,
+				profilePhotoUrl: true,
 			},
 		});
 
