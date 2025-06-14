@@ -73,6 +73,7 @@ jobs:
             -e SMTP_PASS=${{ secrets.SMTP_PASS }} \
             -e VIDEOS_BUCKET_NAME=${{ secrets.VIDEOS_BUCKET_NAME }} \
             -e THUMBS_BUCKET_NAME=${{ secrets.THUMBS_BUCKET_NAME }} \
+            -e PROFILE_PHOTOS_BUCKET_NAME=${{ secrets.PROFILE_PHOTOS_BUCKET_NAME }} \
             -e BUCKET_ACCESS_KEY=${{ secrets.BUCKET_ACCESS_KEY }} \
             -e BUCKET_SECRET_ACCESS_KEY=${{ secrets.BUCKET_SECRET_ACCESS_KEY }} \
             -e BUCKET_REGION=${{ secrets.BUCKET_REGION }} \
