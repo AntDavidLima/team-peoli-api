@@ -13,6 +13,9 @@ import {
 	Post,
 	Query,
 	UseGuards,
+	UseInterceptors,
+	UploadedFile,
+	InternalServerErrorException
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcryptjs';
@@ -21,8 +24,13 @@ import { AuthenticationTokenPayloadSchema } from 'src/authentication/authenticat
 import { AuthenticationTokenPayload } from 'src/authentication/token-payload/token-payload.decorator';
 import { Env } from 'src/env';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { File, FileInterceptor } from '@nest-lab/fastify-multer';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path'
 
 const createUserBodySchema = z.object({
 	name: z.string({ required_error: "O campo 'Nome' é obrigatório" }),
@@ -75,6 +83,7 @@ const updateUserBodySchema = z
 			.regex(/^\d{11}$/, { message: 'Telefone inválido' }),
 		newPassword: z.string().min(8).optional(),
 		currentPassword: z.string().min(8).optional(),
+		profilePhotoUrl: z.string().optional(),
 	})
 	.refine(
 		(schema) => !(schema.newPassword && !schema.name),
@@ -181,31 +190,19 @@ export class UserController {
 			);
 		}
 
-		return this.prismaService.$transaction([
+		const whereConditions: Prisma.UserWhereInput = {};
+		whereConditions.isProfessor = false;
+
+		if (query) {
+			whereConditions.OR = [
+				{ name: { contains: query, mode: 'insensitive' } },
+				{ email: { contains: query, mode: 'insensitive' } },
+				{ phone: { contains: query, mode: 'insensitive' } },
+			];
+    	}
+		return await this.prismaService.$transaction([
 			this.prismaService.user.count({
-				where: {
-					isProfessor: false,
-					OR: [
-						{
-							name: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							email: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							phone: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-					],
-				},
+				where: whereConditions,
 			}),
 			this.prismaService.user.findMany({
 				select: {
@@ -214,29 +211,7 @@ export class UserController {
 					email: true,
 					phone: true,
 				},
-				where: {
-					isProfessor: false,
-					OR: [
-						{
-							name: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							email: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-						{
-							phone: {
-								contains: query,
-								mode: 'insensitive',
-							},
-						},
-					],
-				},
+				where: whereConditions,
 				skip: (page - 1) * rows,
 				take: rows,
 			}),
@@ -278,6 +253,7 @@ export class UserController {
 				name: true,
 				email: true,
 				phone: true,
+				profilePhotoUrl: true,
 			},
 			where: {
 				id,
@@ -339,13 +315,15 @@ export class UserController {
 	}
 
 	@Patch(':id')
+	@UseInterceptors(FileInterceptor('profilePhoto'))
 	async update(
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone, newPassword, currentPassword }: UpdateUserBodySchema,
+		{ email, name, phone, newPassword, profilePhotoUrl, currentPassword }: UpdateUserBodySchema,
+		@UploadedFile() profilePhotoFile?: File,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
@@ -374,6 +352,7 @@ export class UserController {
 				id: true,
 				lastPasswordChange: true,
 				password: true,
+				profilePhotoUrl: true,
 			},
 			where: {
 				id,
@@ -404,28 +383,78 @@ export class UserController {
 				throw new BadRequestException('Senha atual incorreta');
 			}
 		}
+		if (profilePhotoFile) {
+		const s3Client = new S3Client({
+			region: this.configService.get('BUCKET_REGION', { infer: true }),
+			credentials: {
+			accessKeyId: this.configService.get('BUCKET_ACCESS_KEY', {
+				infer: true,
+			}),
+			secretAccessKey: this.configService.get('BUCKET_SECRET_ACCESS_KEY', {
+				infer: true,
+			}),
+			},
+		});
+
+		if (user.profilePhotoUrl) {
+			try {
+			const oldKey = new URL(user.profilePhotoUrl).pathname.substring(1);
+			
+			if(oldKey && oldKey.includes('/')) {
+				await s3Client.send(
+				new DeleteObjectCommand({
+					Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME'),
+					Key: oldKey,
+				}),
+				);
+			}
+			} catch (error) {
+				throw new InternalServerErrorException("Não foi possível deletar a foto de perfil antiga");
+			}
+		}
+
+		const fileExtension = extname(profilePhotoFile.originalname);
+		const newKey = `${user.id}/${randomUUID()}${fileExtension}`;
+
+		await s3Client.send(
+			new PutObjectCommand({
+			Bucket: this.configService.get('PROFILE_PHOTOS_BUCKET_NAME', {
+				infer: true,
+			}),
+			Key: newKey,
+			Body: profilePhotoFile.buffer,
+			ContentType: profilePhotoFile.mimetype, 
+			}),
+		);
+
+		const bucketName = this.configService.get('PROFILE_PHOTOS_BUCKET_NAME');
+		const region = this.configService.get('BUCKET_REGION');
+		profilePhotoUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${newKey}`;
+		}
 
 		const rounds = this.configService.get('ENCRYPTION_ROUNDS', {
-			infer: true,
+		infer: true,
 		});
 
 		const updatedUser = await this.prismaService.user.update({
-			select: {
-				id: true,
-				name: true,
-				email: true,
-				phone: true,
-			},
-			data: {
-				email,
-				name,
-				phone,
-				password: newPassword ? await hash(newPassword, rounds) : undefined,
-				lastPasswordChange: newPassword ? new Date() : undefined,
-			},
-			where: {
-				id,
-			},
+		select: {
+			id: true,
+			name: true,
+			email: true,
+			phone: true,
+			profilePhotoUrl: true, 
+		},
+		data: {
+			email,
+			name,
+			phone,
+			password: newPassword ? await hash(newPassword, rounds) : undefined,
+			lastPasswordChange: newPassword ? new Date() : undefined,
+			profilePhotoUrl: profilePhotoUrl,
+		},
+		where: {
+			id,
+		},
 		});
 
 		return updatedUser;

@@ -13,6 +13,7 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter(),
   );
+  
 
   const config = new DocumentBuilder()
     .setTitle('Team Peoli')
