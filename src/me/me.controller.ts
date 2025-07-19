@@ -30,6 +30,7 @@ export class MeController {
 				email: true,
 				phone: true,
 				profilePhotoUrl: true,
+				isActive: true,
 			},
 		});
 

@@ -84,6 +84,7 @@ const updateUserBodySchema = z
 		newPassword: z.string().min(8).optional(),
 		currentPassword: z.string().min(8).optional(),
 		profilePhotoUrl: z.string().optional(),
+		isActive: z.boolean(),
 	})
 	.refine(
 		(schema) => !(schema.newPassword && !schema.name),
@@ -210,6 +211,7 @@ export class UserController {
 					name: true,
 					email: true,
 					phone: true,
+					isActive: true,
 				},
 				where: whereConditions,
 				skip: (page - 1) * rows,
@@ -254,6 +256,7 @@ export class UserController {
 				email: true,
 				phone: true,
 				profilePhotoUrl: true,
+				isActive: true,
 			},
 			where: {
 				id,
@@ -322,7 +325,7 @@ export class UserController {
 		@Param(new ZodValidationPipe(updateUserParamsSchema))
 		{ id }: UpdateUserParamsSchema,
 		@Body(new ZodValidationPipe(updateUserBodySchema))
-		{ email, name, phone, newPassword, profilePhotoUrl, currentPassword }: UpdateUserBodySchema,
+		{ email, name, phone, isActive, newPassword, profilePhotoUrl, currentPassword }: UpdateUserBodySchema,
 		@UploadedFile() profilePhotoFile?: File,
 	) {
 		const currentUser = await this.prismaService.user.findUnique({
@@ -451,6 +454,7 @@ export class UserController {
 			password: newPassword ? await hash(newPassword, rounds) : undefined,
 			lastPasswordChange: newPassword ? new Date() : undefined,
 			profilePhotoUrl: profilePhotoUrl,
+			isActive: isActive ?? true,
 		},
 		where: {
 			id,
