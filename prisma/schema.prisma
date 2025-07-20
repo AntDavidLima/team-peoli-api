@@ -113,6 +113,7 @@ model TrainingExercise {
   orientations Json?
   restTime     Int?     @map("rest_time")
   order        Int?
+  userNote     String?   @map("user_note")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
