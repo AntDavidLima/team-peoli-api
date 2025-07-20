@@ -7,12 +7,12 @@ import { ExerciseController } from './exercise/exercise.controller';
 import { MuscleGroupController } from './muscle-group/muscle-group.controller';
 import { RoutineController } from './routine/routine.controller';
 import { MeController } from './me/me.controller';
-import { TrainingController } from './training/training.controller';
 import { WorkoutModule } from './workout/workout.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { NodemailerService } from './nodemailer/nodemailer.service';
 import { ExerciseModule } from './exercise/exercise.module';
+import { TrainingModule } from './training/training.module';
 
 @Module({
 	imports: [
@@ -25,13 +25,13 @@ import { ExerciseModule } from './exercise/exercise.module';
 		UserModule,
 		PrismaModule,
 		ExerciseModule,
+		TrainingModule
 	],
 	controllers: [
 		ExerciseController,
 		MuscleGroupController,
 		RoutineController,
 		MeController,
-		TrainingController,
 	],
 	providers: [PrismaService, NodemailerService],
 })
