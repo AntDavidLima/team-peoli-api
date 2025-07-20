@@ -134,6 +134,7 @@ export class TrainingController {
 						reps: true,
 						restTime: true,
 						orientations: true,
+						userNote: true,
 						exercise: {
 							select: {
 								id: true,
