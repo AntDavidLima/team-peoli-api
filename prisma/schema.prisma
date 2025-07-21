@@ -38,6 +38,7 @@ model User {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
   isProfessor        Boolean   @default(false) @map("is_professor")
+  isActive           Boolean   @default(true) @map("is_active")
   lastPasswordChange DateTime? @map("last_password_change")
   lastLogin          DateTime? @map("last_login")
 
@@ -112,6 +113,7 @@ model TrainingExercise {
   orientations Json?
   restTime     Int?     @map("rest_time")
   order        Int?
+  userNote     String?   @map("user_note")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
