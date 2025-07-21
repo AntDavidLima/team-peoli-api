@@ -84,7 +84,7 @@ const updateUserBodySchema = z
 		newPassword: z.string().min(8).optional(),
 		currentPassword: z.string().min(8).optional(),
 		profilePhotoUrl: z.string().optional(),
-		isActive: z.boolean(),
+		isActive: z.boolean().optional(),
 	})
 	.refine(
 		(schema) => !(schema.newPassword && !schema.name),
