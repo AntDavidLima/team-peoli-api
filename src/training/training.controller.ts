@@ -129,6 +129,9 @@ export class TrainingController {
 					},
 				},
 				exercises: {
+					orderBy: {
+						order: 'asc',
+					},
 					select: {
 						sets: true,
 						reps: true,
