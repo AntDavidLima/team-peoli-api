@@ -13,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { NodemailerService } from './nodemailer/nodemailer.service';
 import { ExerciseModule } from './exercise/exercise.module';
 import { TrainingModule } from './training/training.module';
+import { SummaryController } from './summary/summary.controller';
 
 @Module({
 	imports: [
@@ -32,6 +33,7 @@ import { TrainingModule } from './training/training.module';
 		MuscleGroupController,
 		RoutineController,
 		MeController,
+		SummaryController
 	],
 	providers: [PrismaService, NodemailerService],
 })
