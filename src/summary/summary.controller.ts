@@ -77,7 +77,7 @@ export class SummaryController {
             throw new BadRequestException('Workout finalizado não encontrado ou não pertence ao usuário.');
         }
 
-        const namedTraining = currentWorkout.trainings.find(t => t.name);
+        const namedTraining = [...currentWorkout.trainings].reverse().find(t => t.name);
         const trainingName = namedTraining?.name || "Treino";
         const totalDurationSeconds = differenceInSeconds(currentWorkout.endTime, currentWorkout.startTime);
         const totalVolume = calculateVolume(currentWorkout);
