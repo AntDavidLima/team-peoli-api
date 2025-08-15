@@ -2,6 +2,7 @@ import {
     BadRequestException,
     Controller,
     Param,
+    Query,
     UseGuards,
     Get
 } from '@nestjs/common';
@@ -20,6 +21,10 @@ interface ExercisePerformanceSummary {
     currentVolume: number;
     previousVolume: number | null;
 }
+
+const getWorkoutSummaryQuerySchema = z.object({
+    trainingId: z.coerce.number(),
+})
 
 const getWorkoutSummaryParamsSchema = z.object({
   id: z.coerce.number(),
@@ -53,17 +58,21 @@ export class SummaryController {
     async getSummary(
         @Param(new ZodValidationPipe(getWorkoutSummaryParamsSchema))
         { id: workoutId }: GetWorkoutSummaryParamsSchema,
+        @Query(new ZodValidationPipe(getWorkoutSummaryQuerySchema))
+        { trainingId }: z.infer<typeof getWorkoutSummaryQuerySchema>,
         @AuthenticationTokenPayload()
         authenticationTokenPayload: AuthenticationTokenPayloadSchema,
     ) {
         const userId = authenticationTokenPayload.sub;
 
+        const contextTraining = await this.prismaService.training.findUnique({
+            where: { id: trainingId },
+            select: { name: true }
+        });
+
         const currentWorkout = await this.prismaService.workout.findFirst({
             where: { id: workoutId, studentId: userId },
             include: {
-                trainings: {
-                    select: { id: true, name: true }
-                },
                 exercises: {
                     include: {
                         exercise: { select: { name: true } },
@@ -77,8 +86,7 @@ export class SummaryController {
             throw new BadRequestException('Workout finalizado não encontrado ou não pertence ao usuário.');
         }
 
-        const namedTraining = [...currentWorkout.trainings].reverse().find(t => t.name);
-        const trainingName = namedTraining?.name || "Treino";
+        const trainingName = contextTraining?.name || "Treino";
         const totalDurationSeconds = differenceInSeconds(currentWorkout.endTime, currentWorkout.startTime);
         const totalVolume = calculateVolume(currentWorkout);
         const exercisePerformances: ExercisePerformanceSummary[] = currentWorkout.exercises.map((we) => ({
@@ -88,7 +96,6 @@ export class SummaryController {
             previousVolume: null,
         }));
 
-        const contextualTrainingIds = currentWorkout.trainings.map(t => t.id);
         const allPreviousWorkoutsOfSameType = await this.prismaService.workout.findMany({
             where: {
                 studentId: userId,
@@ -100,9 +107,7 @@ export class SummaryController {
                 },
                 trainings: {
                     some: {
-                        id: {
-                            in: contextualTrainingIds
-                        }
+                        id: trainingId
                     }
                 },
             },
