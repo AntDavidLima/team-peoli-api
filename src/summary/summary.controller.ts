@@ -29,14 +29,15 @@ const getWorkoutSummaryQuerySchema = z.object({
 const getWorkoutSummaryParamsSchema = z.object({
   id: z.coerce.number(),
 });
-
 type GetWorkoutSummaryParamsSchema = z.infer<typeof getWorkoutSummaryParamsSchema>;
+type GetWorkoutSummaryQuerySchema = z.infer<typeof getWorkoutSummaryQuerySchema>;
 
 type WorkoutWithDetails = Workout & {
     exercises: (Prisma.WorkoutExerciseGetPayload<{
         include: { WorkoutExerciseSets: true };
     }>)[];
 };
+type WorkoutWithTrainings = WorkoutWithDetails & { trainings: { id: number }[] };
 
 const calculateVolume = (workout: WorkoutWithDetails): number => {
     return workout.exercises.reduce((workoutSum, exercise) => {
@@ -59,7 +60,7 @@ export class SummaryController {
         @Param(new ZodValidationPipe(getWorkoutSummaryParamsSchema))
         { id: workoutId }: GetWorkoutSummaryParamsSchema,
         @Query(new ZodValidationPipe(getWorkoutSummaryQuerySchema))
-        { trainingId }: z.infer<typeof getWorkoutSummaryQuerySchema>,
+        { trainingId }: GetWorkoutSummaryQuerySchema,
         @AuthenticationTokenPayload()
         authenticationTokenPayload: AuthenticationTokenPayloadSchema,
     ) {
@@ -82,8 +83,8 @@ export class SummaryController {
             },
         });
 
-        if (!currentWorkout || !currentWorkout.endTime) {
-            throw new BadRequestException('Workout finalizado não encontrado ou não pertence ao usuário.');
+        if (!currentWorkout || !currentWorkout.endTime || !contextTraining) {
+            throw new BadRequestException('Workout finalizado ou plano de treino não encontrado.');
         }
 
         const trainingName = contextTraining?.name || "Treino";
@@ -122,7 +123,7 @@ export class SummaryController {
                 }
             },
         });
-
+        
         let previousTotalVolume: number | null = null;
         let allTimeBestVolume: number | null = null;
         if (allPreviousWorkoutsOfSameType.length > 0) {
@@ -138,7 +139,7 @@ export class SummaryController {
             const previousVolumes = allPreviousWorkoutsOfSameType.map(workout => calculateVolume(workout));
             allTimeBestVolume = Math.max(...previousVolumes);
         }
-
+        
         const allWorkoutsInContext = [...allPreviousWorkoutsOfSameType, currentWorkout];
         const volumeHistoryForGraph = allWorkoutsInContext
             .slice(-4)
@@ -146,39 +147,60 @@ export class SummaryController {
                 date: workout.endTime,
                 volume: calculateVolume(workout),
             }));
+            
+		const workoutsOfSameTypeCount = allWorkoutsInContext.length;
 
-        const allUserWorkouts = await this.prismaService.workout.findMany({
-            where: { studentId: userId, endTime: { not: null } },
-            orderBy: { endTime: 'asc' },
-            include: { exercises: { include: { WorkoutExerciseSets: true } } },
-        });
+		const allUserWorkouts = await this.prismaService.workout.findMany({
+			where: { studentId: userId, endTime: { not: null } },
+			orderBy: { endTime: 'asc' },
+			include: {
+                trainings: { select: { id: true } },
+                exercises: { include: { WorkoutExerciseSets: true } }
+            },
+		});
 
-        let totalPrsForUser = 0;
-        let currentMaxVolume = 0;
-        if (allUserWorkouts.length > 0) {
-            for (const workout of allUserWorkouts) {
+		let totalPrsForUser = 0;
+        const countedPrWorkoutIds = new Set<number>();
+
+        const workoutsByTraining = allUserWorkouts.reduce((acc, workout) => {
+            workout.trainings.forEach(training => {
+                const id = training.id;
+                if (!acc[id]) acc[id] = [];
+                acc[id].push(workout);
+            });
+            return acc;
+        }, {} as Record<number, WorkoutWithTrainings[]>);
+
+        for (const trainingGroupId in workoutsByTraining) {
+            const groupWorkouts = workoutsByTraining[trainingGroupId];
+            groupWorkouts.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+            
+            let maxVolumeInGroup = 0;
+            for (const workout of groupWorkouts) {
                 const workoutVolume = calculateVolume(workout);
-                if (workoutVolume > currentMaxVolume) {
-                    totalPrsForUser++;
-                    currentMaxVolume = workoutVolume;
+                if (workoutVolume > maxVolumeInGroup) {
+                    if (!countedPrWorkoutIds.has(workout.id)) {
+                        totalPrsForUser++;
+                        countedPrWorkoutIds.add(workout.id);
+                    }
+                    maxVolumeInGroup = workoutVolume;
                 }
             }
         }
-
+        
         const totalWorkoutsForUser = allUserWorkouts.length;
-        const workoutsOfSameTypeCount = allWorkoutsInContext.length;
-
-        return {
-            totalDurationSeconds,
-            totalVolume,
-            previousTotalVolume,
-            totalWorkoutsForUser,
+		
+		return {
+			totalDurationSeconds,
+			totalVolume,
+			previousTotalVolume,
+			totalWorkoutsForUser,
             allTimeBestVolume,
-            totalPrsForUser,
-            exercisePerformances,
+			totalPrsForUser,
+			exercisePerformances,
             volumeHistory: volumeHistoryForGraph,
             workoutsOfSameTypeCount,
-            trainingName
+			trainingName
         };
     }
 }
