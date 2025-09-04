@@ -2,6 +2,8 @@ import {
 	BadRequestException,
 	Body,
 	Controller,
+	Delete,
+	NotFoundException,
 	Param,
 	Post,
 	Put,
@@ -39,6 +41,12 @@ const upadteWorkoutBodySchema = z.object({
 });
 
 type UpdateWorkoutBodySchema = z.infer<typeof upadteWorkoutBodySchema>;
+
+const deleteWorkoutParamsSchema = z.object({
+	id: z.coerce.number(),
+});
+
+type DeleteWorkoutParamsSchema = z.infer<typeof deleteWorkoutParamsSchema>;
 
 @Controller('workout')
 @UseGuards(AuthenticationGuard)
@@ -212,6 +220,42 @@ export class WorkoutController {
 			select: {
 				id: true,
 				startTime: true,
+			},
+		});
+	}
+
+	@Delete(':id')
+	async delete(
+		@Param(new ZodValidationPipe(deleteWorkoutParamsSchema))
+		{ id }: DeleteWorkoutParamsSchema,
+		@AuthenticationTokenPayload()
+		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
+	) {
+		const currentUserId = authenticationTokenPayload.sub;
+
+		const workout = await this.prismaService.workout.findUnique({
+			where: {
+				id,
+			},
+			select: {
+				id: true,
+				studentId: true,
+			},
+		});
+
+		if (!workout) {
+			throw new NotFoundException('Treino não encontrado.');
+		}
+
+		if (workout.studentId !== currentUserId) {
+			throw new BadRequestException(
+				'Você não tem permissão para remover este treino.',
+			);
+		}
+
+		await this.prismaService.workout.delete({
+			where: {
+				id: workout.id,
 			},
 		});
 	}
