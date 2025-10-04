@@ -44,6 +44,8 @@ model User {
 
   workouts Workout[]
   Routine  Routine[]
+  pushSubscriptions PushSubscription[]
+  ScheduledNotifications ScheduledNotification[]
 
   @@map("user")
 }
@@ -174,6 +176,42 @@ model WorkoutExerciseSets {
   workoutExerciseId Int             @map("workout_exercise_id")
 
   @@map("workout_exercise_sets")
+}
+
+model PushSubscription {
+  id           Int      @id @default(autoincrement())
+  endpoint     String   @unique
+  p256dh       String
+  auth         String
+  userId       Int      @map("user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscription")
+}
+
+model ScheduledNotification {
+  id        Int                @id @default(autoincrement())
+  payload   Json
+  sendAt    DateTime           @map("send_at")
+  status    NotificationStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @map("user_id")
+
+  @@index([status, sendAt])
+  @@map("scheduled_notification")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  CANCELLED
+  ERROR
 }
 
 enum Day {
