@@ -54,4 +54,18 @@ export class PushNotificationController {
     }
     return { message: 'Notification cancelled successfully.' };
   }
+
+  @Post('cancel-all')
+  async cancelAllNotifications(
+    @AuthenticationTokenPayload() payload: AuthenticationTokenPayloadSchema,
+  ) {
+    const result = await this.pushNotificationService.cancelAllPendingNotificationsForUser(
+      payload.sub,
+    );
+    
+    return {
+      message: 'All pending notifications have been cancelled.',
+      count: result.count,
+    };
+  }
 }

@@ -60,6 +60,25 @@ export class PushNotificationService {
     return { success: count > 0 };
   }
 
+  async cancelAllPendingNotificationsForUser(userId: number) {
+    const { count } = await this.prismaService.scheduledNotification.updateMany({
+      where: {
+        userId,
+        status: 'PENDING',
+      },
+      data: {
+        status: 'CANCELLED',
+      },
+    });
+
+    if (count > 0) {
+      this.logger.log(`Cancelled ${count} pending notifications for user ${userId}`);
+    }
+
+    return { success: true, count };
+  }
+
+
   @Cron(CronExpression.EVERY_SECOND)
   async handlePendingNotifications() {
     this.logger.log(`Cron job running. Current server time (UTC): ${new Date().toISOString()}`);
