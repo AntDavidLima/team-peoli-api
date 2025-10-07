@@ -8,11 +8,16 @@ import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 
 const scheduleRestNotificationSchema = z.object({
   durationInSeconds: z.number().positive(),
+  data: z.object({
+    url: z.string(), 
+  }).optional(),
 });
 
 const cancelNotificationSchema = z.object({
   notificationId: z.number().positive(),
 });
+
+type ScheduleRestNotificationBody = z.infer<typeof scheduleRestNotificationSchema>;
 
 @Controller('notifications')
 @UseGuards(AuthenticationGuard)
@@ -22,11 +27,12 @@ export class PushNotificationController {
   @Post('schedule/rest')
   async scheduleRestNotification(
     @AuthenticationTokenPayload() payload: AuthenticationTokenPayloadSchema,
-    @Body(new ZodValidationPipe(scheduleRestNotificationSchema)) body: { durationInSeconds: number },
+    @Body(new ZodValidationPipe(scheduleRestNotificationSchema)) body: ScheduleRestNotificationBody,
   ) {
     const notification = await this.pushNotificationService.scheduleRestNotification(
       payload.sub,
       body.durationInSeconds,
+      body.data, 
     );
     return {
       message: 'Notification scheduled successfully',

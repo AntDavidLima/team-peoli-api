@@ -19,12 +19,13 @@ export class PushNotificationService {
     }
   }
 
-  async scheduleRestNotification(userId: number, durationInSeconds: number) {
+  async scheduleRestNotification(userId: number, durationInSeconds: number, data?: {url: string}) {
     const sendAt = new Date(Date.now() + durationInSeconds * 1000);
     
     const payload = {
-      title: 'Tempo de descanso finalizado! 💪',
-      body: 'Hora de voltar ao treino e esmagar a próxima série.',
+      title: 'Acabou a moleza!',
+      body: 'O descanso encerrou, execute a próxima série!',
+      data: data || { url: '/' } 
     };
 
     const notification = await this.prismaService.scheduledNotification.create({
@@ -107,6 +108,12 @@ export class PushNotificationService {
           payload
         ).catch(err => {
             this.logger.error(`Failed to send push to ${sub.endpoint}. Error: ${err.message}`);
+            if (err.statusCode === 410) {
+              this.logger.log(`Subscription ${sub.endpoint} is expired. Removing from DB.`);
+              return this.prismaService.pushSubscription.delete({
+                where: { endpoint: sub.endpoint },
+              });
+            }
         })
       );
       
