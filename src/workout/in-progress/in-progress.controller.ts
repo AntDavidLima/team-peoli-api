@@ -33,7 +33,7 @@ export class InProgressController {
 	@Get()
 	async index(
 		@Query(new ZodValidationPipe(getWorkoutInProgressQuerySchema))
-		{ trainingIds }: GetWorkoutInProgressQuerySchema,
+		query: GetWorkoutInProgressQuerySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
@@ -48,54 +48,53 @@ export class InProgressController {
 		});
 
 		if (!currentUser) {
-			throw new BadRequestException(
-				'Não foi possível identificar o usuário logado',
-			);
+			throw new BadRequestException('Não foi possível identificar o usuário logado');
 		}
 
-		if (typeof trainingIds === 'number') {
-			trainingIds = [trainingIds]
-		}
+		const whereClause: any = {
+			studentId: currentUser.id,
+			endTime: null,
+		};
 
-		const trainings = await this.prismaService.training.findMany({
-			where: {
-				id: { in: trainingIds },
-			},
-			select: {
-				routines: {
-					select: {
-						userId: true,
+		if (query.trainingIds) {
+			let trainingIds = Array.isArray(query.trainingIds) ? query.trainingIds : [query.trainingIds];
+
+			const trainings = await this.prismaService.training.findMany({
+				where: {
+					id: { in: trainingIds }
+				},
+				select: {
+					routines: {
+						select: {
+							userId: true,
+						},
 					},
 				},
-			},
-		});
+			});
 
-		if (trainingIds && trainings.length !== trainingIds.length) {
-			throw new BadRequestException(
-				'Não foi possível identificar um ou mais treinos do qual você deseja visualizar o treino em andamento',
+			if (trainings.length !== trainingIds.length) {
+				throw new BadRequestException('Um ou mais treinos não foram encontrados.');
+			}
+
+			const trainingBelongsToCurrentUser = trainings.every((training) =>
+				training.routines.every((routine) => routine.userId === currentUser.id),
 			);
-		}
 
-		const trainingBelongsToCurrentUser = trainings.every((training) =>
-			training.routines.every((routine) => routine.userId === currentUser.id),
-		);
+			if (!trainingBelongsToCurrentUser && !currentUser.isProfessor) {
+				throw new BadRequestException(
+					'Você não tem permissão para visualizar este treino.',
+				);
+			}
 
-		if (!trainingBelongsToCurrentUser && !currentUser.isProfessor) {
-			throw new BadRequestException(
-				'Você não tem permissão para visualizar este treino',
-			);
+			whereClause.trainings = {
+				every: {
+					id: { in: trainingIds },
+				},
+			};
 		}
 
 		const workout = await this.prismaService.workout.findFirst({
-			where: {
-				trainings: {
-					every: {
-						id: { in: trainingIds },
-					},
-				},
-				studentId: currentUser.id,
-				endTime: null,
-			},
+			where: whereClause,
 			select: {
 				id: true,
 				startTime: true,
@@ -123,6 +122,10 @@ export class InProgressController {
 				},
 			},
 		});
+
+        if (workout && workout.trainings.length === 0) {
+			return null;
+		}
 
 		return workout;
 	}
