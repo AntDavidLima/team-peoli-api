@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule'; 
 import { PrismaService } from './prisma/prisma.service';
 import { ConfigModule } from '@nestjs/config';
 import { envSchema } from './env';
@@ -14,9 +15,11 @@ import { NodemailerService } from './nodemailer/nodemailer.service';
 import { ExerciseModule } from './exercise/exercise.module';
 import { TrainingModule } from './training/training.module';
 import { SummaryController } from './summary/summary.controller';
+import { PushModule } from './push/push.module';
 
 @Module({
 	imports: [
+		ScheduleModule.forRoot(), 
 		ConfigModule.forRoot({
 			validate: (env) => envSchema.parse(env),
 			isGlobal: true,
@@ -26,7 +29,8 @@ import { SummaryController } from './summary/summary.controller';
 		UserModule,
 		PrismaModule,
 		ExerciseModule,
-		TrainingModule
+		TrainingModule,
+		PushModule
 	],
 	controllers: [
 		ExerciseController,

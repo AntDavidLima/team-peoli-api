@@ -18,7 +18,7 @@ const getWorkoutInProgressQuerySchema = z.object({
 			required_error:
 				'Não foi possível identificar o treino a que este exercício pertence',
 		}),
-	).or(z.coerce.number()),
+	).or(z.coerce.number()).optional(),
 });
 
 type GetWorkoutInProgressQuerySchema = z.infer<
@@ -70,7 +70,7 @@ export class InProgressController {
 			},
 		});
 
-		if (trainings.length !== trainingIds.length) {
+		if (trainingIds && trainings.length !== trainingIds.length) {
 			throw new BadRequestException(
 				'Não foi possível identificar um ou mais treinos do qual você deseja visualizar o treino em andamento',
 			);
@@ -99,6 +99,16 @@ export class InProgressController {
 			select: {
 				id: true,
 				startTime: true,
+				trainings: {
+					where: {
+						routines: {
+							some: {},
+						},
+					},
+					select: {
+						id: true,
+					},
+				},
 				exercises: {
 					select: {
 						exerciseId: true,

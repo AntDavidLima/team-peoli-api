@@ -77,6 +77,9 @@ jobs:
             -e BUCKET_ACCESS_KEY=${{ secrets.BUCKET_ACCESS_KEY }} \
             -e BUCKET_SECRET_ACCESS_KEY=${{ secrets.BUCKET_SECRET_ACCESS_KEY }} \
             -e BUCKET_REGION=${{ secrets.BUCKET_REGION }} \
+            -e VAPID_SUBJECT=${{ secrets.VAPID_SUBJECT }} \
+            -e VAPID_PUBLIC_KEY=${{ secrets.VAPID_PUBLIC_KEY }} \
+            -e VAPID_PRIVATE_KEY=${{ secrets.VAPID_PRIVATE_KEY }} \
             --network=host \
             team-peoli-api:latest
       - name: Clean up
