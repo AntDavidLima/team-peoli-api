@@ -13,11 +13,19 @@ const scheduleRestNotificationSchema = z.object({
   }).optional(),
 });
 
+const scheduleFinishReminderSchema = z.object({
+  data: z.object({
+    url: z.string(),
+  }).optional(),
+});
+
 const cancelNotificationSchema = z.object({
   notificationId: z.number().positive(),
 });
 
 type ScheduleRestNotificationBody = z.infer<typeof scheduleRestNotificationSchema>;
+
+type ScheduleFinishReminderBody = z.infer<typeof scheduleFinishReminderSchema>;
 
 @Controller('notifications')
 @UseGuards(AuthenticationGuard)
@@ -40,19 +48,31 @@ export class PushNotificationController {
     };
   }
 
-  @Post('cancel')
-  async cancelNotification(
+  @Post('schedule/finish-reminder')
+  async scheduleFinishReminder(
     @AuthenticationTokenPayload() payload: AuthenticationTokenPayloadSchema,
-    @Body(new ZodValidationPipe(cancelNotificationSchema)) body: { notificationId: number },
+    @Body(new ZodValidationPipe(scheduleFinishReminderSchema)) body: ScheduleFinishReminderBody,
   ) {
-    const result = await this.pushNotificationService.cancelScheduledNotification(
-      body.notificationId,
+    await this.pushNotificationService.scheduleFinishWorkoutReminder(
+      payload.sub,
+      body.data,
+    );
+    
+    return { message: 'Finish workout reminder scheduled successfully.' };
+  }
+
+  @Post('cancel-rest')
+  async cancelRestNotifications(
+    @AuthenticationTokenPayload() payload: AuthenticationTokenPayloadSchema,
+  ) {
+    const result = await this.pushNotificationService.cancelPendingRestNotificationsForUser(
       payload.sub,
     );
-    if (!result.success) {
-      return { message: 'Notification cancel request processed.' };
-    }
-    return { message: 'Notification cancelled successfully.' };
+    
+    return {
+      message: 'Pending rest notifications have been cancelled.',
+      count: result.count,
+    };
   }
 
   @Post('cancel-all')

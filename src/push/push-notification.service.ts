@@ -34,6 +34,7 @@ export class PushNotificationService {
         sendAt,
         payload,
         status: 'PENDING',
+        type: 'REST',
       },
     });
 
@@ -41,12 +42,36 @@ export class PushNotificationService {
     return notification;
   }
 
-  async cancelScheduledNotification(notificationId: number, userId: number) {
+  async scheduleFinishWorkoutReminder(userId: number, data?: { url: string }) {
+    const THREE_HOURS_IN_SECONDS = 10800;
+    const sendAt = new Date(Date.now() + THREE_HOURS_IN_SECONDS * 1000);
+
+    const payload = {
+      title: 'Você ainda está treinando?',
+      body: 'Encerre seu treino para salvar seus resultados.',
+      data: data || { url: '/' },
+    };
+
+    const notification = await this.prismaService.scheduledNotification.create({
+      data: {
+        userId,
+        sendAt,
+        payload,
+        status: 'PENDING',
+        type: 'FINISH_REMINDER',
+      },
+    });
+
+    this.logger.log(`Finish workout reminder ${notification.id} scheduled for user ${userId}`);
+    return notification;
+  }
+
+  async cancelPendingRestNotificationsForUser(userId: number) {
     const { count } = await this.prismaService.scheduledNotification.updateMany({
       where: {
-        id: notificationId,
         userId,
         status: 'PENDING',
+        type: 'REST',
       },
       data: {
         status: 'CANCELLED',
@@ -54,10 +79,9 @@ export class PushNotificationService {
     });
 
     if (count > 0) {
-      this.logger.log(`Notification ${notificationId} cancelled for user ${userId}`);
+      this.logger.log(`Cancelled ${count} pending REST notifications for user ${userId}`);
     }
-
-    return { success: count > 0 };
+    return { success: true, count };
   }
 
   async cancelAllPendingNotificationsForUser(userId: number) {
