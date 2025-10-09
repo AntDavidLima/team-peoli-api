@@ -172,10 +172,6 @@ export class WorkoutController {
 			},
 		});
 
-		await this.prismaService.activeWorkout.deleteMany({
-			where: { userId: studentId },
-		});
-
 		return updatedWorkout;
 	}
 
