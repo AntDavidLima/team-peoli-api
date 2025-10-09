@@ -15,6 +15,7 @@ import { AuthenticationTokenPayload } from 'src/authentication/token-payload/tok
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ZodValidationPipe } from 'src/zod-validation/zod-validation.pipe';
 import { z } from 'zod';
+import { Day } from '@prisma/client';
 
 const createWorkoutBodySchema = z.object({
 	trainingIds: z.array(
@@ -23,6 +24,9 @@ const createWorkoutBodySchema = z.object({
 				'Não foi possível identificar o treino a que este exercício pertence',
 		}),
 	),
+	currentTrainingId: z.coerce.number().positive(),
+	day: z.nativeEnum(Day),
+    initialExerciseId: z.coerce.number().positive(),
 });
 
 type CreateWorkoutBodySchema = z.infer<typeof createWorkoutBodySchema>;
@@ -62,9 +66,10 @@ export class WorkoutController {
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
+		const studentId = authenticationTokenPayload.sub;
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
-				id: authenticationTokenPayload.sub,
+				id: studentId,
 			},
 			select: {
 				id: true,
@@ -167,19 +172,25 @@ export class WorkoutController {
 			},
 		});
 
+		await this.prismaService.activeWorkout.deleteMany({
+			where: { userId: studentId },
+		});
+
 		return updatedWorkout;
 	}
 
 	@Post()
 	async store(
 		@Body(new ZodValidationPipe(createWorkoutBodySchema))
-		{ trainingIds }: CreateWorkoutBodySchema,
+		{ trainingIds, currentTrainingId, day, initialExerciseId }: CreateWorkoutBodySchema,
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
+		const studentId = authenticationTokenPayload.sub;
+
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
-				id: authenticationTokenPayload.sub,
+				id: studentId,
 			},
 			select: {
 				id: true,
@@ -207,22 +218,48 @@ export class WorkoutController {
 			);
 		}
 
-		return await this.prismaService.workout.create({
-			data: {
-				startTime: new Date(),
-				studentId: currentUser.id,
-				trainings: {
-					connect: trainings.map((training) => ({
-						id: training.id,
-					})),
-				},
-			},
-			select: {
-				id: true,
-				startTime: true,
-			},
-		});
+		try {
+			const newWorkout = await this.prismaService.$transaction(async (prisma) => {
+				await prisma.activeWorkout.deleteMany({
+					where: { userId: studentId },
+				});
+
+				const workout = await prisma.workout.create({
+					data: {
+						startTime: new Date(),
+						studentId: studentId,
+						trainings: {
+							connect: trainings.map((training) => ({
+								id: training.id,
+							})),
+						},
+					},
+					select: {
+						id: true,
+						startTime: true,
+					},
+				});
+
+				await prisma.activeWorkout.create({
+					data: {
+						userId: studentId,
+						workoutId: workout.id,
+						trainingId: currentTrainingId,
+						initialExerciseId: initialExerciseId,
+						day: day,
+					},
+				});
+
+				return workout;
+			});
+
+			return newWorkout;
+		} catch (error) {
+			console.error(error);
+			throw new BadRequestException('Não foi possível iniciar o treino. Tente novamente.');
+		}
 	}
+
 
 	@Delete(':id')
 	async delete(

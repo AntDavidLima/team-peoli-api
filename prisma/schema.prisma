@@ -41,6 +41,7 @@ model User {
   isActive           Boolean   @default(true) @map("is_active")
   lastPasswordChange DateTime? @map("last_password_change")
   lastLogin          DateTime? @map("last_login")
+  activeWorkout      ActiveWorkout?
 
   workouts Workout[]
   Routine  Routine[]
@@ -206,6 +207,20 @@ model ScheduledNotification {
 
   @@index([status, sendAt])
   @@map("scheduled_notification")
+}
+
+model ActiveWorkout {
+  id                Int      @id @default(autoincrement())
+  day               Day
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            Int      @unique @map("user_id")
+  workoutId         Int      @map("workout_id")
+  trainingId        Int      @map("training_id")
+  initialExerciseId Int      @map("initial_exercise_id")
+
+  @@map("active_workout")
 }
 
 enum NotificationType {
