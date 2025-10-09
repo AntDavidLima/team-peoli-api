@@ -30,9 +30,10 @@ export class StopController {
 		@AuthenticationTokenPayload()
 		authenticationTokenPayload: AuthenticationTokenPayloadSchema,
 	) {
+		const studentId = authenticationTokenPayload.sub;
 		const currentUser = await this.prismaService.user.findUnique({
 			where: {
-				id: authenticationTokenPayload.sub,
+				id: studentId,
 			},
 			select: {
 				id: true,
@@ -78,6 +79,11 @@ export class StopController {
 				startTime: true,
 			},
 		});
+
+		await this.prismaService.activeWorkout.deleteMany({
+			where: { userId: studentId },
+		});
+
 
 		return updatedWorkout;
 	}
