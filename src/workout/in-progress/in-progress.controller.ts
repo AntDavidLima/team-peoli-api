@@ -112,6 +112,9 @@ export class InProgressController {
 					select: {
 						exerciseId: true,
 						WorkoutExerciseSets: {
+							orderBy: {
+								id: 'asc',
+							},
 							select: {
 								id: true,
 								load: true,
