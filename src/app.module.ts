@@ -16,6 +16,7 @@ import { ExerciseModule } from './exercise/exercise.module';
 import { TrainingModule } from './training/training.module';
 import { SummaryController } from './summary/summary.controller';
 import { PushModule } from './push/push.module';
+import { PasswordResetController } from './user/password-reset-mail/password-reset-mail.controller';
 
 @Module({
 	imports: [
@@ -37,7 +38,8 @@ import { PushModule } from './push/push.module';
 		MuscleGroupController,
 		RoutineController,
 		MeController,
-		SummaryController
+		SummaryController,
+		PasswordResetController,
 	],
 	providers: [PrismaService, NodemailerService],
 })
